@@ -12,7 +12,6 @@ var popsicle = require('popsicle');
 var Router = require('../helpers/router.js');
 var schema = require('../schema/transport.js');
 var sandboxHelper = require('../helpers/sandbox.js');
-var constants = require('../helpers/constants.js');
 var sql = require('../sql/transport.js');
 var zlib = require('zlib');
 
