@@ -1,8 +1,8 @@
 'use strict';
 
 module.exports = {
-	minVersion: "5.0.0",
-	currentVersion: "5.2.0",
+	currentVersion: "6.1.0",
+	minVersion: "^6.1.0",
 	activeDelegates: 101,
 	addressLength: 208,
 	blockHeaderLength: 248,
