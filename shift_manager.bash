@@ -150,7 +150,7 @@ install_shift() {
 install_webui() {
 
     echo -n "Installing Shift WebUi... "
-    git clone https://github.com/shiftcurrency/shift-wallet &>> $logfile || { echo -n "Could not clone git wallet source. Exiting." && exit 1; }
+    git clone https://github.com/ShiftNrg/shift-wallet &>> $logfile || { echo -n "Could not clone git wallet source. Exiting." && exit 1; }
 
     if [[ -d "public" ]]; then
         rm -rf public/
@@ -203,8 +203,8 @@ install_ssl() {
     country=SE
     state=Stockholm
     locality=Stockholm
-    organization=ShiftCurrency
-    organizationalunit=ShiftCurrency
+    organization=ShiftNrg
+    organizationalunit=ShiftNrg
 
     while true; do
         echo -n "Supply domain or IP-address for the ssl certificate (the host the shift runs on): "
