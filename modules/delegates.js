@@ -580,27 +580,6 @@ Delegates.prototype.cleanup = function (cb) {
 // Private
 
 // Shared
-shared.getNextForgers = function (req, cb) {
-	var currentBlock = modules.blocks.getLastBlock ();
-	var limit = req.body.limit || 10;
-
-	modules.delegates.generateDelegateList(currentBlock.height, function (err, activeDelegates) {
-		if (err) {
-			return setImmediate(cb, err);
-		}
-
-		var currentSlot = slots.getSlotNumber(currentBlock.timestamp);
-		var nextForgers = [];
-
-		for (var i = 1; i <= slots.delegates && i <= limit; i++) {
-			if (activeDelegates[(currentSlot + i) % slots.delegates]) {
-				nextForgers.push (activeDelegates[(currentSlot + i) % slots.delegates]);
-			}
-		}
-		return setImmediate(cb, null, {currentSlot: currentSlot, delegates: nextForgers});
-	});
-};
-
 shared.getDelegate = function (req, cb) {
 	library.schema.validate(req.body, schema.getDelegate, function (err) {
 		if (err) {
