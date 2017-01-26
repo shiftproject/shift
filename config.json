@@ -1,7 +1,7 @@
 {
     "port": 9305,
     "address": "0.0.0.0",
-    "version": "6.0.0",
+    "version": "6.1.0",
     "fileLogLevel": "info",
     "logFileName": "logs/shift.log",
     "logAppend": false,
