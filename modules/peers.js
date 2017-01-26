@@ -12,7 +12,6 @@ var Peer = require('../logic/peer.js');
 var PeerSweeper = require('../logic/peerSweeper.js');
 var Router = require('../helpers/router.js');
 var sandboxHelper = require('../helpers/sandbox.js');
-var constants = require('../helpers/constants.js');
 var schema = require('../schema/peers.js');
 var sql = require('../sql/peers.js');
 var util = require('util');
