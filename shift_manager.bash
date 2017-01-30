@@ -6,8 +6,15 @@ logfile="shift_manager.log"
 version="1.0.0"
 
 cd "$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
-
 root_path=$(pwd)
+
+SHIFT_CONFIG="config.json"
+DB_NAME="$(grep "database" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
+DB_UNAME="$(grep "user" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
+DB_PASSWD="$(grep "password" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
+DB_SNAPSHOT="blockchain.db.gz"
+NETWORK="main"
+BLOCKCHAIN_URL="https://downloads.shiftnrg.org/snapshot/$NETWORK"
 
 install_prereq() {
 
@@ -54,7 +61,7 @@ install_prereq() {
     echo -e "done.\n"
 
     echo -n "Enable postgresql... "
-		sudo update-rc.d postgresql enable
+        sudo update-rc.d postgresql enable
     echo -e "done.\n"
 
     return 0;
@@ -77,6 +84,60 @@ ntp_checks() {
       fi # if [[ ! -f "/proc/user_beancounters" ]]
     elif [[ -f "/proc/user_beancounters" ]]; then
       echo -e "Running OpenVZ or LXC VM, NTP is not required, done. \n"
+    fi
+}
+
+create_database() {
+    res=$(sudo -u postgres dropdb --if-exists "$DB_NAME" 2> /dev/null)
+    res=$(sudo -u postgres createdb -O "$DB_UNAME" "$DB_NAME" 2> /dev/null)
+    res=$(sudo -u postgres psql -lqt 2> /dev/null |grep "$DB_NAME" |awk {'print $1'} |wc -l)
+    
+    if [[ $res -eq 1 ]]; then
+      echo "√ Postgresql database created successfully."
+    else
+      echo "X Failed to create Postgresql database."
+      exit 1
+    fi
+}
+
+download_blockchain() {
+    echo -n "Enter Y to download a recent snapshot or enter N to use a local snapshot: "
+    read downloadornot
+
+    if [[ "$downloadornot" == "Y" ]]; then
+        continue
+    elif [[ "$downloadornot" == "N" ]]; then
+        break
+    fi
+
+    if [ "$downloadornot" != "N" ]; then
+        rm -f $DB_SNAPSHOT
+        if [ -z "$BLOCKCHAIN_URL" ]; then
+            BLOCKCHAIN_URL="https://downloads.shiftnrg.org/snapshot/$NETWORK"
+        fi
+        echo "√ Downloading $DB_SNAPSHOT from $BLOCKCHAIN_URL"
+        curl --progress-bar -o $DB_SNAPSHOT "$BLOCKCHAIN_URL/$DB_SNAPSHOT"
+        if [ $? != 0 ]; then
+            rm -f $DB_SNAPSHOT
+            echo "X Failed to download blockchain snapshot."
+            exit 1
+        else
+            echo "√ Blockchain snapshot downloaded successfully."
+        fi
+    else
+        echo -e "√ Using Local Snapshot."
+    fi
+}
+
+restore_blockchain() {
+    export PGPASSWORD=$DB_PASSWD
+    echo "Restoring blockchain with $DB_SNAPSHOT"
+    gunzip -fcq "$DB_SNAPSHOT" | psql -q -h 127.0.0.1 -U "$DB_UNAME" -d "$DB_NAME" &> /dev/null
+    if [ $? != 0 ]; then
+        echo "X Failed to restore blockchain."
+        exit 1
+    else
+        echo "√ Blockchain restored successfully."
     fi
 }
 
@@ -314,7 +375,6 @@ start_shift() {
 
 
 running() {
-
     process=$(forever list |grep app.js |awk {'print $9'})
     if [[ -z $process ]] || [[ "$process" == "STOPPED" ]]; then
         return 1
@@ -343,6 +403,11 @@ parse_option() {
   done
 }
 
+rebuild_shift() {
+    create_database
+    download_blockchain
+    restore_blockchain
+}
 
 case $1 in
     "install")
@@ -363,6 +428,19 @@ case $1 in
     "update_version")
         update_version
     ;;
+    "reload")
+      stop_shift
+      sleep 2
+      start_shift
+      ;;
+    "rebuild")
+      stop_shift
+      sleep 1
+      start_postgres
+      sleep 1
+      rebuild_shift
+      start_shift
+      ;;
     "status")
         if running; then
             echo "OK"
