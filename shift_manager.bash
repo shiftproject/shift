@@ -101,16 +101,10 @@ create_database() {
 }
 
 download_blockchain() {
-    echo -n "Enter Y to download a recent snapshot or enter N to use a local snapshot: "
+    echo -n "Download a recent, verified snapshot? (y/n): "
     read downloadornot
 
-    if [[ "$downloadornot" == "Y" ]]; then
-        continue
-    elif [[ "$downloadornot" == "N" ]]; then
-        break
-    fi
-
-    if [ "$downloadornot" != "N" ]; then
+    if [ "$downloadornot" == "y" ] || [ -z "$downloadornot" ]; then
         rm -f $DB_SNAPSHOT
         if [ -z "$BLOCKCHAIN_URL" ]; then
             BLOCKCHAIN_URL="https://downloads.shiftnrg.org/snapshot/$NETWORK"
@@ -457,7 +451,7 @@ case $1 in
     ;;
 
 *)
-    echo 'Available options: install, update_version(under development)'
+    echo 'Available options: install, reload (stop/start), rebuild (official snapshot), start, stop'
     echo 'Usage: ./shift_installer.bash install'
     exit 1
 ;;
