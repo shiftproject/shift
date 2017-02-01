@@ -40,10 +40,10 @@ install_prereq() {
     { echo "Could not install packages prerequisites. Exiting." && exit 1; };
     echo -e "done.\n"
 
-    echo -n "Removing former postgresql installation... ";
-    sudo apt-get purge -y -qq postgres* &>> $logfile || \
-    { echo "Could not remove former installation of postgresql. Exiting." && exit 1; };
-    echo -e "done.\n"
+#    echo -n "Removing former postgresql installation... ";
+#    sudo apt-get purge -y -qq postgres* &>> $logfile || \
+#    { echo "Could not remove former installation of postgresql. Exiting." && exit 1; };
+#    echo -e "done.\n"
 
     echo -n "Updating apt repository sources for postgresql.. ";
     sudo bash -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ wheezy-pgdg main" > /etc/apt/sources.list.d/pgdg.list' &>> $logfile || \
