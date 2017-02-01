@@ -90,7 +90,7 @@ ntp_checks() {
 create_database() {
     res=$(sudo -u postgres dropdb --if-exists "$DB_NAME" 2> /dev/null)
     res=$(sudo -u postgres createdb -O "$DB_UNAME" "$DB_NAME" 2> /dev/null)
-    res=$(sudo -u postgres psql -t -c "SELECT count(*) FROM pg_database where datname='shift_db'" 2> /dev/null)
+    res=$(sudo -u postgres psql -t -c "SELECT count(*) FROM pg_database where datname='$DB_NAME'" 2> /dev/null)
     
     if [[ $res -eq 1 ]]; then
       echo "√ Postgresql database created successfully."
@@ -140,16 +140,20 @@ add_pg_user_database() {
     if start_postgres; then
         user_exists=$(grep postgres /etc/passwd |wc -l);
         if [[ $user_exists == 1 ]]; then
-            echo -n "Creating database user... "
-            res=$(sudo -u postgres psql -c "CREATE USER shift WITH PASSWORD 'testing';" 2> /dev/null)
-            res=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='shift'" 2> /dev/null)
-            if [[ $res -eq 1 ]]; then
+            res=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_UNAME'" 2> /dev/null)
+            if [[ $res -ne 1 ]]; then
+              echo -n "Creating database user... "
+              res=$(sudo -u postgres psql -c "CREATE USER $DB_UNAME WITH PASSWORD '$DB_PASSWD';" 2> /dev/null)
+              res=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_UNAME'" 2> /dev/null)
+              if [[ $res -eq 1 ]]; then
                 echo -e "done.\n"
+              fi
             fi
 
             echo -n "Creating database... "
-            res=$(sudo -u postgres createdb -O shift shift_db 2> /dev/null)
-            res=$(sudo -u postgres psql -lqt 2> /dev/null |grep shift_db |awk {'print $1'} |wc -l)
+            res=$(sudo -u postgres dropdb --if-exists "$DB_NAME" 2> /dev/null)
+            res=$(sudo -u postgres createdb -O "$DB_UNAME" "$DB_NAME" 2> /dev/null)
+            res=$(sudo -u postgres psql -t -c "SELECT count(*) FROM pg_database where datname='$DB_NAME'" 2> /dev/null)
             if [[ $res -eq 1 ]]; then
                 echo -e "done.\n"
             fi
@@ -377,13 +381,8 @@ running() {
 }
 
 show_blockHeight(){
-   SHIFT_CONFIG="config.json"
-   SOURCE_DB_NAME="$(grep "database" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
-   SOURCE_UNAME="$(grep "user" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
-   SOURCE_PASSWORD="$(grep "password" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
-
-   export PGPASSWORD=$SOURCE_PASSWORD
-   blockHeight=$(psql -d $SOURCE_DB_NAME -U $SOURCE_UNAME -h localhost -p 5432 -t -c "select height from blocks order by height desc limit 1")
+   export PGPASSWORD=$DB_PASSWD
+   blockHeight=$(psql -d $DB_NAME -U $DB_UNAME -h localhost -p 5432 -t -c "select height from blocks order by height desc limit 1")
   echo "Block height = $blockHeight"
 }
 
