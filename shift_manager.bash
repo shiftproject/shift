@@ -90,7 +90,7 @@ ntp_checks() {
 create_database() {
     res=$(sudo -u postgres dropdb --if-exists "$DB_NAME" 2> /dev/null)
     res=$(sudo -u postgres createdb -O "$DB_UNAME" "$DB_NAME" 2> /dev/null)
-    res=$(sudo -u postgres psql -lqt 2> /dev/null |grep "$DB_NAME" |awk {'print $1'} |wc -l)
+    res=$(sudo -u postgres psql -t -c "SELECT count(*) FROM pg_database where datname='shift_db'" 2> /dev/null)
     
     if [[ $res -eq 1 ]]; then
       echo "√ Postgresql database created successfully."
@@ -101,7 +101,7 @@ create_database() {
 }
 
 download_blockchain() {
-    echo -n "Download a recent, verified snapshot? (y/n): "
+    echo -n "Download a recent, verified snapshot? ([y]/n): "
     read downloadornot
 
     if [ "$downloadornot" == "y" ] || [ -z "$downloadornot" ]; then
