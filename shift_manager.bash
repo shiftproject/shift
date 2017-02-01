@@ -8,12 +8,23 @@ version="1.0.0"
 cd "$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 root_path=$(pwd)
 
+set_network() {
+  if [ "$(grep "7337a324ef27e1e234d1e9018cacff7d4f299a09c2df9be460543b8f7ef652f1" $SHIFT_CONFIG )" ];then
+    NETWORK="main"
+  elif [ "$(grep "cba57b868c8571599ad594c6607a77cad60cf0372ecde803004d87e679117c12" $SHIFT_CONFIG )" ];then
+    NETWORK="test"
+  else
+    NETWORK="unknown"
+  fi
+}
+
 SHIFT_CONFIG="config.json"
 DB_NAME="$(grep "database" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
 DB_UNAME="$(grep "user" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
 DB_PASSWD="$(grep "password" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
 DB_SNAPSHOT="blockchain.db.gz"
-NETWORK="main"
+NETWORK=""
+set_network
 BLOCKCHAIN_URL="https://downloads.shiftnrg.org/snapshot/$NETWORK"
 
 install_prereq() {
@@ -39,6 +50,11 @@ install_prereq() {
     sudo apt-get install -y -qq curl build-essential python lsb-release wget openssl autoconf libtool automake libsodium-dev &>> $logfile || \
     { echo "Could not install packages prerequisites. Exiting." && exit 1; };
     echo -e "done.\n"
+
+#    echo -n "Removing former postgresql installation... ";
+#    sudo apt-get purge -y -qq postgres* &>> $logfile || \
+#    { echo "Could not remove former installation of postgresql. Exiting." && exit 1; };
+#    echo -e "done.\n"
 
     echo -n "Updating apt repository sources for postgresql.. ";
     sudo bash -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ wheezy-pgdg main" > /etc/apt/sources.list.d/pgdg.list' &>> $logfile || \
@@ -85,7 +101,7 @@ ntp_checks() {
 create_database() {
     res=$(sudo -u postgres dropdb --if-exists "$DB_NAME" 2> /dev/null)
     res=$(sudo -u postgres createdb -O "$DB_UNAME" "$DB_NAME" 2> /dev/null)
-    res=$(sudo -u postgres psql -lqt 2> /dev/null |grep "$DB_NAME" |awk {'print $1'} |wc -l)
+    res=$(sudo -u postgres psql -t -c "SELECT count(*) FROM pg_database where datname='$DB_NAME'" 2> /dev/null)
     
     if [[ $res -eq 1 ]]; then
       echo "√ Postgresql database created successfully."
@@ -96,7 +112,7 @@ create_database() {
 }
 
 download_blockchain() {
-    echo -n "Download a recent, verified snapshot? (y/n): "
+    echo -n "Download a recent, verified snapshot? ([y]/n): "
     read downloadornot
 
     if [ "$downloadornot" == "y" ] || [ -z "$downloadornot" ]; then
@@ -135,16 +151,20 @@ add_pg_user_database() {
     if start_postgres; then
         user_exists=$(grep postgres /etc/passwd |wc -l);
         if [[ $user_exists == 1 ]]; then
-            echo -n "Creating database user (testnet)... "
-            res=$(sudo -u postgres psql -c "CREATE USER shift_testnet WITH PASSWORD 'testing';" 2> /dev/null)
-            res=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='shift_testnet'" 2> /dev/null)
-            if [[ $res -eq 1 ]]; then
+            res=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_UNAME'" 2> /dev/null)
+            if [[ $res -ne 1 ]]; then
+              echo -n "Creating database user... "
+              res=$(sudo -u postgres psql -c "CREATE USER $DB_UNAME WITH PASSWORD '$DB_PASSWD';" 2> /dev/null)
+              res=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_UNAME'" 2> /dev/null)
+              if [[ $res -eq 1 ]]; then
                 echo -e "done.\n"
+              fi
             fi
 
-            echo -n "Creating database (testnet)... "
-            res=$(sudo -u postgres createdb -O shift_testnet shift_db_testnet 2> /dev/null)
-            res=$(sudo -u postgres psql -lqt 2> /dev/null |grep shift_db_testnet |awk {'print $1'} |wc -l)
+            echo -n "Creating database... "
+            res=$(sudo -u postgres dropdb --if-exists "$DB_NAME" 2> /dev/null)
+            res=$(sudo -u postgres createdb -O "$DB_UNAME" "$DB_NAME" 2> /dev/null)
+            res=$(sudo -u postgres psql -t -c "SELECT count(*) FROM pg_database where datname='$DB_NAME'" 2> /dev/null)
             if [[ $res -eq 1 ]]; then
                 echo -e "done.\n"
             fi
@@ -372,13 +392,8 @@ running() {
 }
 
 show_blockHeight(){
-   SHIFT_CONFIG="config.json"
-   SOURCE_DB_NAME="$(grep "database" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
-   SOURCE_UNAME="$(grep "user" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
-   SOURCE_PASSWORD="$(grep "password" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
-
-   export PGPASSWORD=$SOURCE_PASSWORD
-   blockHeight=$(psql -d $SOURCE_DB_NAME -U $SOURCE_UNAME -h localhost -p 5432 -t -c "select height from blocks order by height desc limit 1")
+   export PGPASSWORD=$DB_PASSWD
+   blockHeight=$(psql -d $DB_NAME -U $DB_UNAME -h localhost -p 5432 -t -c "select height from blocks order by height desc limit 1")
   echo "Block height = $blockHeight"
 }
 
@@ -421,6 +436,7 @@ case $1 in
       stop_shift
       sleep 2
       start_shift
+      show_blockHeight
       ;;
     "rebuild")
       stop_shift
@@ -429,20 +445,22 @@ case $1 in
       sleep 1
       rebuild_shift
       start_shift
+      show_blockHeight
       ;;
     "status")
-        if running; then
-            echo "OK"
-            show_blockHeight
-        else
-            echo "KO"
-        fi
+      if running; then
+        echo "√ SHIFT is running."
+        show_blockHeight
+      else
+        echo "X SHIFT is NOT running."
+      fi
     ;;
     "start")
-        start_shift
+      start_shift
+      show_blockHeight
     ;;
     "stop")
-        stop_shift
+      stop_shift
     ;;
 
 *)
