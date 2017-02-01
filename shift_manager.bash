@@ -8,12 +8,23 @@ version="1.0.0"
 cd "$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 root_path=$(pwd)
 
+set_network() {
+  if [ "$(grep "7337a324ef27e1e234d1e9018cacff7d4f299a09c2df9be460543b8f7ef652f1" $SHIFT_CONFIG )" ];then
+    NETWORK="main"
+  elif [ "$(grep "cba57b868c8571599ad594c6607a77cad60cf0372ecde803004d87e679117c12" $SHIFT_CONFIG )" ];then
+    NETWORK="test"
+  else
+    NETWORK="unknown"
+  fi
+}
+
 SHIFT_CONFIG="config.json"
 DB_NAME="$(grep "database" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
 DB_UNAME="$(grep "user" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
 DB_PASSWD="$(grep "password" $SHIFT_CONFIG | cut -f 4 -d '"' | head -1)"
 DB_SNAPSHOT="blockchain.db.gz"
-NETWORK="main"
+NETWORK=""
+set_network
 BLOCKCHAIN_URL="https://downloads.shiftnrg.org/snapshot/$NETWORK"
 
 install_prereq() {
