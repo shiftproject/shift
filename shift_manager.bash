@@ -436,6 +436,7 @@ case $1 in
       stop_shift
       sleep 2
       start_shift
+      show_blockHeight
       ;;
     "rebuild")
       stop_shift
@@ -444,20 +445,22 @@ case $1 in
       sleep 1
       rebuild_shift
       start_shift
+      show_blockHeight
       ;;
     "status")
-        if running; then
-            echo "OK"
-            show_blockHeight
-        else
-            echo "KO"
-        fi
+      if running; then
+        echo "√ SHIFT is running."
+        show_blockHeight
+      else
+        echo "X SHIFT is NOT running."
+      fi
     ;;
     "start")
-        start_shift
+      start_shift
+      show_blockHeight
     ;;
     "stop")
-        stop_shift
+      stop_shift
     ;;
 
 *)
