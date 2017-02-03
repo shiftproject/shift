@@ -425,8 +425,7 @@ case $1 in
 #        install_ssl
         echo ""
         echo ""
-        echo "Start SHIFT with: node app.js"
-        echo "Open the User Interface with: http://node.ip:9305"
+        echo "SHIFT successfully installed"
 
     ;;
     "update_version")
