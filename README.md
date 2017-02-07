@@ -1,4 +1,4 @@
-## SHIFT version 6.0.2
+## SHIFT version 6.1.1
 
 ## Installation
 
@@ -16,16 +16,25 @@ Stop Shift
 ```
 ./shift_manager.bash stop
 ```
+Reload Shift (stop and start)
+```
+./shift_manager.bash reload
+```
 Shift node status, is it running or not?
 ```
 ./shift_manager.bash status
 ```
+Rebuild blockchain fron official snapshot
+```
+./shift_manager.bash rebuild
+```
 
 
 ## Authors
-- MQ <Shift Team>
-- Goldeneye <Shift Team>
-- Ralfs <Shift Team>
+- MQ (Shift Team)
+- Goldeneye (Shift Team)
+- Ralfs (Shift Team)
+- Jan (Shift Team)
 - Joey <shiftcurrency@gmail.com>
 - Boris Povod <boris@crypti.me>
 - Pavel Nekrasov <landgraf.paul@gmail.com>
