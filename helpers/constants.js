@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = {
-	currentVersion: "6.1.1t",
+	currentVersion: "6.2.0t",
 	minVersion: "^6.0.1t",
 	activeDelegates: 101,
 	addressLength: 208,
