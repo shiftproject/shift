@@ -610,7 +610,7 @@ shared.version = function (req, cb) {
 	return setImmediate(cb, null, {
 		build:   library.build,
 		commit:  library.lastCommit,
-		version: library.constants.currentVersion
+		version: constants.currentVersion
 	});
 };
 
