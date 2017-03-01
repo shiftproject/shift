@@ -21,7 +21,7 @@
     "ejs": "=2.5.2",
     "express": "=4.14.0",
     "express-domain-middleware": "=0.1.0",
-    "express-query-int": "https://github.com/LiskHQ/express-query-int/tarball/master",
+    "express-query-int": "=1.0.1",
     "express-rate-limit": "=2.5.0",
     "extend": "=3.0.0",
     "ip": "https://github.com/LiskHQ/node-ip/tarball/ec401f16915024450bf9b843eeb4c5366ef5235c",
@@ -44,7 +44,7 @@
     "valid-url": "=1.0.9",
     "validator": "=5.7.0",
     "validator.js": "=2.0.3",
-    "z-schema": "https://github.com/LiskHQ/z-schema/tarball/master"
+    "z-schema": "=3.18.0"
   },
   "devDependencies": {
     "bitcore-mnemonic": "=1.1.1",
