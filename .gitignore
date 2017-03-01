@@ -1,5 +1,5 @@
 dapps/
-logs/*.log
+logs/
 node_modules
 ssl/
 public/
