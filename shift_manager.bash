@@ -374,10 +374,16 @@ case $1 in
 
     ;;
     "update_client")
-        update_client
+      stop_shift
+      sleep 2
+      update_client
+      start_shift
     ;;
     "update_wallet")
-        update_wallet
+      stop_shift
+      sleep 2
+      update_wallet
+      start_shift
     ;;
     "reload")
       stop_shift
