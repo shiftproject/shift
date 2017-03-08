@@ -352,6 +352,12 @@ rebuild_shift() {
     restore_blockchain
 }
 
+#Start
+echo "Starting $0... " > $logfile
+echo -n "Date: " >> $logfile
+date >> $logfile
+echo "" >> $logfile
+
 case $1 in
     "install")
         parse_option $@
