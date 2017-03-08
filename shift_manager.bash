@@ -377,12 +377,14 @@ case $1 in
       stop_shift
       sleep 2
       update_client
+      sleep 2
       start_shift
     ;;
     "update_wallet")
       stop_shift
       sleep 2
       update_wallet
+      sleep 2
       start_shift
     ;;
     "reload")
@@ -393,9 +395,9 @@ case $1 in
       ;;
     "rebuild")
       stop_shift
-      sleep 1
+      sleep 2
       start_postgres
-      sleep 1
+      sleep 2
       rebuild_shift
       start_shift
       show_blockHeight
