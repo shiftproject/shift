@@ -264,7 +264,6 @@ update_client() {
 		npm install --production &>> $logfile || { echo -e "\n\nCould not install node modules. Exiting." && exit 1; }
 
     echo "done."
-    cd ..
     return 0;
 }
 
