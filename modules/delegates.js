@@ -160,10 +160,6 @@ __private.attachApi = function () {
 	});
 
 	router.get('/forging/status', function (req, res) {
-		if (!checkIpInList(library.config.forging.access.whiteList, req.ip)) {
-			return res.json({success: false, error: 'Access denied'});
-		}
-
 		library.schema.validate(req.query, schema.forgingStatus, function (err) {
 			if (err) {
 				return res.json({success: false, error: err[0].message});
@@ -172,6 +168,10 @@ __private.attachApi = function () {
 			if (req.query.publicKey) {
 				return res.json({success: true, enabled: !!__private.keypairs[req.query.publicKey]});
 			} else {
+				if (!checkIpInList(library.config.forging.access.whiteList, req.ip)) {
+					return res.json({success: false, error: 'Access denied'});
+				}
+
 				var delegates_cnt = _.keys(__private.keypairs).length;
 				return res.json({success: true, enabled: (delegates_cnt > 0 ? true : false), delegates: _.keys(__private.keypairs) });
 			}
