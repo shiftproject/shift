@@ -331,8 +331,8 @@ running() {
 }
 
 show_blockHeight(){
-   export PGPASSWORD=$DB_PASSWD
-   blockHeight=$(psql -d $DB_NAME -U $DB_UNAME -h localhost -p 5432 -t -c "select height from blocks order by height desc limit 1")
+  export PGPASSWORD=$DB_PASSWD
+  blockHeight=$(psql -d $DB_NAME -U $DB_UNAME -h localhost -p 5432 -t -c "select height from blocks order by height desc limit 1")
   echo "Block height = $blockHeight"
 }
 
@@ -347,32 +347,35 @@ parse_option() {
 }
 
 rebuild_shift() {
-    create_database
-    download_blockchain
-    restore_blockchain
+  create_database
+  download_blockchain
+  restore_blockchain
 }
 
-#Start
-echo "Starting $0... " > $logfile
-echo -n "Date: " >> $logfile
-date >> $logfile
-echo "" >> $logfile
+start_log() {
+  echo "Starting $0... " > $logfile
+  echo -n "Date: " >> $logfile
+  date >> $logfile
+  echo "" >> $logfile
+}
 
 case $1 in
     "install")
-        parse_option $@
-        install_prereq
-        ntp_checks
-        add_pg_user_database
-        install_node_npm
-        install_shift
-        install_webui
-        echo ""
-        echo ""
-        echo "SHIFT successfully installed"
+      parse_option $@
+      start_log
+      install_prereq
+      ntp_checks
+      add_pg_user_database
+      install_node_npm
+      install_shift
+      install_webui
+      echo ""
+      echo ""
+      echo "SHIFT successfully installed"
 
     ;;
     "update_client")
+      start_log
       stop_shift
       sleep 2
       update_client
@@ -380,6 +383,7 @@ case $1 in
       start_shift
     ;;
     "update_wallet")
+      start_log
       stop_shift
       sleep 2
       update_wallet
