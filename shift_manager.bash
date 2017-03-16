@@ -2,11 +2,12 @@
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US.UTF-8
-logfile="shift_manager.log"
 version="1.0.0"
 
 cd "$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 root_path=$(pwd)
+
+logfile=$root_path"/shift_manager.log"
 
 set_network() {
   if [ "$(grep "7337a324ef27e1e234d1e9018cacff7d4f299a09c2df9be460543b8f7ef652f1" $SHIFT_CONFIG )" ];then
@@ -250,104 +251,42 @@ install_webui() {
 
 }
 
-update_version() {
+update_client() {
 
     if [[ -f config.json ]]; then
-        cp config.json /tmp/
+        cp config.json config.json.bak
     fi
 
-    echo -n "Updating Shift version to latest... "
+    echo -n "Updating Shift client ... "
 
-    git pull || { echo "Failed to fetch updates from git repository. Run it manually with: git pull. Exiting." && exit 1; }
-
-    if [[ -f /tmp/config.json ]]; then
-        mv /tmp/config.json .
-    fi
+    git checkout . &>> $logfile || { echo "Failed to checkout last status of git repository. Run it manually with: 'git checkout .'. Exiting." && exit 1; }
+    git pull &>> $logfile || { echo "Failed to fetch updates from git repository. Run it manually with: git pull. Exiting." && exit 1; }
+		npm install --production &>> $logfile || { echo -e "\n\nCould not install node modules. Exiting." && exit 1; }
 
     echo "done."
-
+    return 0;
 }
 
-install_ssl() {
+update_wallet() {
 
-    country=SE
-    state=Stockholm
-    locality=Stockholm
-    organization=ShiftNrg
-    organizationalunit=ShiftNrg
+    echo -n "Updating Shift wallet ... "
 
-    while true; do
-        echo -n "Supply domain or IP-address for the ssl certificate (the host the shift runs on): "
-        read commonname
+    cd public
+    git checkout . &>> $logfile || { echo "Failed to checkout last status of git repository. Exiting." && exit 1; }
+    git pull &>> $logfile || { echo "Failed to fetch updates from git repository. Exiting." && exit 1; }
+    npm install &>> $logfile || { echo -n "Could not install web wallet node modules. Exiting." && exit 1; }
 
-        if [[ -z "$commonname" ]]; then
-            continue
-        else
-            break
-        fi  
-    done
-
-    while true; do
-        echo -n "Supply password for the private key (this password will not be used again, it can be arbitrary): "
-        read password
-
-        if [[ -z "$password" ]]; then
-            continue
-        else
-            break
-        fi
-    done
-
-    while true; do
-        echo -n "Supply email address for the certificate (you do not have to use a real email address): "
-        read email
-
-        if [[ -z "$email" ]]; then
-            continue
-        else
-            break
-        fi
-    done
-
-    echo -n "Generating key request for "$commonname"... "
- 
-    openssl genrsa -des3 -passout pass:"$password" -out "$commonname".key 2048 -noout &>> $logfile || \
-    { echo -e "Could not generate ssl key. Exiting." && exit 1; }
-    echo "done."
- 
-    echo -n "Removing passphrase from key... "
-    openssl rsa -in "$commonname".key -passin pass:"$password" -out "$commonname".key &>> $logfile || \
-    { echo -e "\nCould not remove passphare key. Exiting." && exit 1; }
-    echo "done."
- 
-    echo -n "Creating CSR..."
-    openssl req -new -key "$commonname".key -out "$commonname".csr -passin pass:"$password" \
-        -subj "/C=$country/ST=$state/L=$locality/O=$organization/OU=$organizationalunit/CN=$commonname/emailAddress=$email" &>> $logfile || \
-        { echo -e "\nCould not not generate the CSR. Exiting." && exit 1; }
-    echo "done."
-
-    echo -n "Creating certificate for "$commonname"... "
-    openssl x509 -req -days 365 -in "$commonname".csr -signkey "$commonname".key -out "$commonname".crt &>> $logfile || \
-    { echo -e "\nCould not create ssl certificate. Exiting." && exit 1; }
-    echo "done."
-
-    echo -n "Creating "$commonname" pem file... "
-    if [[ -f "$commonname".crt ]] && [[ -f "$commonname".key ]]; then
-        cat "$commonname".crt "$commonname".key > "$commonname".pem
-    fi
-    echo "done."
-
-    if [[ ! -d ssl/ ]]; then
-        mkdir ssl
+    # Bower config seems to have the wrong permissions. Make sure we change these before trying to use bower.
+    if [[ -d /home/$USER/.config ]]; then
+        sudo chown -R $USER:$USER /home/$USER/.config &> /dev/null
     fi
 
-    mv "$commonname".pem ssl/
-    rm $commonname*
+    bower --allow-root install &>> $logfile || { echo -e "\n\nCould not install bower components for the web wallet. Exiting." && exit 1; }
+    grunt release &>> $logfile || { echo -e "\n\nCould not build web wallet release. Exiting." && exit 1; }
 
-    echo ""
-    echo ""
-    echo "To enable SSL for Shift Web Ui, configure config.json and set both key and cert to ./ssl/$commonname.pem"
-
+    echo "done."
+    cd ..
+    return 0;
 }
 
 stop_shift() {
@@ -392,8 +331,8 @@ running() {
 }
 
 show_blockHeight(){
-   export PGPASSWORD=$DB_PASSWD
-   blockHeight=$(psql -d $DB_NAME -U $DB_UNAME -h localhost -p 5432 -t -c "select height from blocks order by height desc limit 1")
+  export PGPASSWORD=$DB_PASSWD
+  blockHeight=$(psql -d $DB_NAME -U $DB_UNAME -h localhost -p 5432 -t -c "select height from blocks order by height desc limit 1")
   echo "Block height = $blockHeight"
 }
 
@@ -408,28 +347,48 @@ parse_option() {
 }
 
 rebuild_shift() {
-    create_database
-    download_blockchain
-    restore_blockchain
+  create_database
+  download_blockchain
+  restore_blockchain
+}
+
+start_log() {
+  echo "Starting $0... " > $logfile
+  echo -n "Date: " >> $logfile
+  date >> $logfile
+  echo "" >> $logfile
 }
 
 case $1 in
     "install")
-        parse_option $@
-        install_prereq
-        ntp_checks
-        add_pg_user_database
-        install_node_npm
-        install_shift
-        install_webui
-#        install_ssl
-        echo ""
-        echo ""
-        echo "SHIFT successfully installed"
+      parse_option $@
+      start_log
+      install_prereq
+      ntp_checks
+      add_pg_user_database
+      install_node_npm
+      install_shift
+      install_webui
+      echo ""
+      echo ""
+      echo "SHIFT successfully installed"
 
     ;;
-    "update_version")
-        update_version
+    "update_client")
+      start_log
+      stop_shift
+      sleep 2
+      update_client
+      sleep 2
+      start_shift
+    ;;
+    "update_wallet")
+      start_log
+      stop_shift
+      sleep 2
+      update_wallet
+      sleep 2
+      start_shift
     ;;
     "reload")
       stop_shift
@@ -439,9 +398,9 @@ case $1 in
       ;;
     "rebuild")
       stop_shift
-      sleep 1
+      sleep 2
       start_postgres
-      sleep 1
+      sleep 2
       rebuild_shift
       start_shift
       show_blockHeight
@@ -463,7 +422,7 @@ case $1 in
     ;;
 
 *)
-    echo 'Available options: install, reload (stop/start), rebuild (official snapshot), start, stop'
+    echo 'Available options: install, reload (stop/start), rebuild (official snapshot), start, stop, update_client, update_wallet'
     echo 'Usage: ./shift_installer.bash install'
     exit 1
 ;;
