@@ -22,10 +22,10 @@
         ]
     },
     "api": {
+        "enabled": true,
         "access": {
-            "whiteList": [
-                "127.0.0.1"
-            ]
+            "public": false,
+            "whiteList": ["127.0.0.1"]
         },
         "options": {
             "limits": {
@@ -37,6 +37,7 @@
         }
     },
     "peers": {
+        "enabled": true,
         "list": [
             {
                 "ip": "193.70.110.88",
@@ -160,7 +161,9 @@
                 "port": 9305
             }
         ],
-        "blackList": [],
+        "access": {
+            "blackList": []
+        },
         "options": {
             "limits": {
                 "max": 0,
@@ -177,6 +180,9 @@
         "parallelLimit": 20,
         "releaseLimit": 25,
         "relayLimit": 2
+    },
+    "transactions": {
+        "maxTxsPerQueue": 1000
     },
     "forging": {
         "force": false,
