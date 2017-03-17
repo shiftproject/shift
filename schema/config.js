@@ -67,14 +67,20 @@ module.exports = {
 			api: {
 				type: 'object',
 				properties: {
+					enabled: {
+						type: 'boolean'
+					},
 					access: {
 						type: 'object',
 						properties: {
+							public: {
+								type: 'boolean'
+							},
 							whiteList: {
 								type: 'array'
 							}
 						},
-						required: ['whiteList']
+						required: ['public', 'whiteList']
 					},
 					options: {
 						type: 'object',
@@ -101,16 +107,25 @@ module.exports = {
 						required: ['limits']
 					}
 				},
-				required: ['access', 'options']
+				required: ['enabled', 'access', 'options']
 			},
 			peers: {
 				type: 'object',
 				properties: {
+					enabled: {
+						type: 'boolean'
+					},
 					list: {
 						type: 'array'
 					},
-					blackList: {
-						type: 'array'
+					access: {
+						type: 'object',
+						properties: {
+							blackList: {
+								type: 'array'
+							}
+						},
+						required: ['blackList']
 					},
 					options: {
 						properties: {
@@ -139,7 +154,7 @@ module.exports = {
 						required: ['limits', 'timeout']
 					}
 				},
-				required: ['list', 'blackList', 'options']
+				required: ['enabled', 'list', 'access', 'options']
 			},
 			broadcasts: {
 				type: 'object',
@@ -170,6 +185,15 @@ module.exports = {
 						maximum: 100
 					}
 				}
+			},
+			transactions: {
+				type: 'object',
+				maxTxsPerQueue: {
+					type: 'integer',
+					minimum: 100,
+					maximum: 5000
+				},
+				required: ['maxTxsPerQueue']
 			},
 			forging: {
 				type: 'object',
