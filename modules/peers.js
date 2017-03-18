@@ -41,6 +41,7 @@ __private.attachApi = function () {
 	router.map(shared, {
 		'get /': 'getPeers',
 		'get /version': 'version',
+		'get /minVersion': 'minVersion',
 		'get /get': 'getPeer',
 		'get /count': 'count'
 	});
@@ -592,13 +593,39 @@ shared.getPeer = function (req, cb) {
  * @return {Object}   cb.obj Anonymous object with version info
  * @return {String}   cb.obj.build Build information (if available, otherwise '')
  * @return {String}   cb.obj.commit Hash of last git commit (if available, otherwise '')
- * @return {String}   cb.obj.version Lisk version from config file
+ * @return {String}   cb.obj.version Shift current version
  */
 shared.version = function (req, cb) {
 	return setImmediate(cb, null, {
 		build:   library.build,
 		commit:  library.lastCommit,
-		version: constants.currentVersion
+		version: constants.currentVersion,
+		minVersion: modules.system.getMinVersion()
+	});
+};
+
+/**
+ * Returns information about minVersion
+ *
+ * @public
+ * @async
+ * @method minVersion
+ * @param  {Object}   req HTTP request object
+ * @param  {Function} cb Callback function
+ * @return {Function} cb Callback function from params (through setImmediate)
+ * @return {Object}   cb.err error string
+ * @return {Object}   cb.obj Anonymous object with version info
+ * @return {String}   cb.obj.minVersion Shift minVersion
+ */
+shared.minVersion = function (req, cb) {
+	library.schema.validate(req.body, schema.getMinVersion, function (err) {
+		if (err) {
+			return setImmediate(cb, err[0].message);
+		}
+
+		return setImmediate(cb, null, {
+			minVersion: modules.system.getMinVersion(req.body.height)
+		});
 	});
 };
 
