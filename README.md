@@ -1,4 +1,4 @@
-## SHIFT version 6.2.0
+## SHIFT version 6.3.0
 
 ## Installation
 
@@ -7,6 +7,14 @@ Automatic install script for Debian based systems Ubuntu, Mint, Debian.
 Install Shift
 ```
 git clone https://github.com/ShiftNrg/shift.git && shift/shift_manager.bash install
+```
+Update Shift Client
+```
+./shift_manager.bash update_client
+```
+Update Shift GUI (wallet)
+```
+./shift_manager.bash update_wallet
 ```
 Start Shift
 ```
