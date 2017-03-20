@@ -2,7 +2,10 @@
 
 module.exports = {
 	currentVersion: "6.2.0",
-	minVersion: "^6.1.0",
+	minVersion: [
+		{ height: 1,      ver: "^6.1.0"},
+		{ height: 550000, ver: "^6.3.0"}
+	],
 	activeDelegates: 101,
 	addressLength: 208,
 	blockHeaderLength: 248,
