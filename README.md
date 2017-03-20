@@ -8,6 +8,14 @@ Install Shift
 ```
 git clone https://github.com/ShiftNrg/shift.git && shift/shift_manager.bash install
 ```
+Update Shift Client
+```
+./shift_manager.bash update_client
+```
+Update Shift GUI (wallet)
+```
+./shift_manager.bash update_wallet
+```
 Start Shift
 ```
 ./shift_manager.bash start
