@@ -17,7 +17,7 @@ var z_schema = require('./helpers/z_schema.js');
 
 process.stdin.resume();
 
-var versionBuild = fs.readFileSync(path.join(__dirname, 'build'), 'utf8');
+var versionBuild = '';
 /**
  * Hash of last git commit
  *
@@ -110,7 +110,8 @@ var logger = new Logger({ echo: appConfig.consoleLogLevel, errorLevel: appConfig
 
 // Trying to get last git commit
 try {
-	lastCommit = git.getLastCommit();
+	lastCommit   = git.getLastCommit();
+	versionBuild = git.getCommitDate();
 } catch (err) {
 	logger.debug('Cannot get last git commit', err.message);
 }
