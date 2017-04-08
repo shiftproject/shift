@@ -38,7 +38,6 @@ function getLastCommit () {
 function getCommitDate ( commit ) {
 	var spawn = childProcess.spawnSync('git', ['show', '-s', '--format=%ci', commit || 'HEAD']);
 	var err = spawn.stderr.toString().trim();
-console.log("######################################", { erg: spawn, err:err });
 	if (err) {
 		throw new Error(err);
 	} else {
