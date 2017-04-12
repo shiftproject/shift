@@ -261,9 +261,15 @@ update_client() {
 
     git checkout . &>> $logfile || { echo "Failed to checkout last status of git repository. Run it manually with: 'git checkout .'. Exiting." && exit 1; }
     git pull &>> $logfile || { echo "Failed to fetch updates from git repository. Run it manually with: git pull. Exiting." && exit 1; }
-		npm install --production &>> $logfile || { echo -e "\n\nCould not install node modules. Exiting." && exit 1; }
-
+    npm install --production &>> $logfile || { echo -e "\n\nCould not install node modules. Exiting." && exit 1; }
     echo "done."
+
+    if [[ -f $root_path/config.json.bak ]]; then
+      echo -n "Take over config.json entries from previous installation ... "
+      node $root_path/updateConfig.js -o $root_path/config.json.bak -n $root_path/config.json
+      echo "done."
+    fi
+
     return 0;
 }
 
