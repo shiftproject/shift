@@ -573,7 +573,7 @@ Peers.prototype.shared = {
 		return setImmediate(cb, null, {
 			build: library.build,
 			commit: library.lastCommit,
-			version: library.config.version,
+			version: constants.currentVersion,
 			minVersion: modules.system.getMinVersion()
 		});
 	}
