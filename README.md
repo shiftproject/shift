@@ -12,6 +12,10 @@ Install Shift (Testnet)
 ```
 git clone -b testnet https://github.com/ShiftNrg/shift.git && shift/shift_manager.bash install
 ```
+Update Shift Manager
+```
+./shift_manager.bash update_manager
+```
 Update Shift Client
 ```
 ./shift_manager.bash update_client

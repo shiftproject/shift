@@ -27,6 +27,7 @@ DB_SNAPSHOT="blockchain.db.gz"
 NETWORK=""
 set_network
 BLOCKCHAIN_URL="https://downloads.shiftnrg.org/snapshot/$NETWORK"
+GIT_BRANCH="$(git branch | sed -n '/\* /s///p')"
 
 install_prereq() {
 
@@ -251,6 +252,17 @@ install_webui() {
 
 }
 
+
+update_manager() {
+
+    echo -n "Updating Shift Manager ... "
+    wget -q -O shift_manager.bash https://raw.githubusercontent.com/ShiftNrg/shift/$GIT_BRANCH/shift_manager.bash
+    echo "done."
+
+    return 0;
+}
+
+
 update_client() {
 
     if [[ -f config.json ]]; then
@@ -380,6 +392,9 @@ case $1 in
       echo "SHIFT successfully installed"
 
     ;;
+    "update_manager")
+      update_manager
+    ;;
     "update_client")
       start_log
       stop_shift
@@ -428,7 +443,7 @@ case $1 in
     ;;
 
 *)
-    echo 'Available options: install, reload (stop/start), rebuild (official snapshot), start, stop, update_client, update_wallet'
+    echo 'Available options: install, reload (stop/start), rebuild (official snapshot), start, stop, update_manager, update_client, update_wallet'
     echo 'Usage: ./shift_installer.bash install'
     exit 1
 ;;
