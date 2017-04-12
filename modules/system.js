@@ -24,11 +24,10 @@ function System (cb, scope) {
 	__private.height = 1;
 	__private.nethash = library.config.nethash;
 	__private.broadhash = library.config.nethash;
+	__private.nonce = library.nonce;
 
 	setImmediate(cb, null, self);
 }
-
-// Private methods
 
 // Public methods
 System.prototype.headers = function () {
@@ -153,8 +152,6 @@ System.prototype.sandboxApi = function (call, args, cb) {
 System.prototype.onBind = function (scope) {
 	modules = scope;
 };
-
-// Shared
 
 // Export
 module.exports = System;
