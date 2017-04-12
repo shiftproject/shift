@@ -577,7 +577,7 @@ Peers.prototype.shared = {
 			minVersion: modules.system.getMinVersion()
 		});
 	}
-
+};
 
 // Export
 module.exports = Peers;
