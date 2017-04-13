@@ -7,7 +7,8 @@ version="1.0.0"
 cd "$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 root_path=$(pwd)
 
-logfile=$root_path"/shift_manager.log"
+mkdir -p $root_path/logs
+logfile=$root_path/logs/shift_manager.log
 
 set_network() {
   if [ "$(grep "7337a324ef27e1e234d1e9018cacff7d4f299a09c2df9be460543b8f7ef652f1" $SHIFT_CONFIG )" ];then
