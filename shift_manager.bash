@@ -403,6 +403,7 @@ case $1 in
       update_client
       sleep 2
       start_shift
+      show_blockHeight
     ;;
     "update_wallet")
       start_log
@@ -411,6 +412,7 @@ case $1 in
       update_wallet
       sleep 2
       start_shift
+      show_blockHeight
     ;;
     "reload")
       stop_shift
