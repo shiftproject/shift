@@ -3,6 +3,7 @@
 var strftime = require('strftime').utc();
 var fs = require('fs');
 var util = require('util');
+var circularJSON = require('circular-json');
 require('colors');
 
 module.exports = function (config) {
@@ -58,7 +59,7 @@ module.exports = function (config) {
 		} 
 		
 		else if (typeof data === 'object') {			// remove secret in object properties
-			rv = JSON.parse(JSON.stringify(data));	// create a real object copy
+			rv = JSON.parse(circularJSON.stringify(data));	// create a real object copy, filter circular references
 			for (var key in rv) {
 				if (key.search(/secret/i) > -1) {
 					rv[key] = 'XXXXXXXXXX';
@@ -84,7 +85,7 @@ module.exports = function (config) {
 			log.message = snipsecret(log.message);				// remove secret in the message, e.g. url parameter
 
 			if (data && util.isObject(data)) {
-				log.data = JSON.stringify(snipsecret(data));	// remove secret in the data
+				log.data = circularJSON.stringify(snipsecret(data));	// remove secret in the data, filter circular references
 			} else {
 				log.data = data;
 			}
