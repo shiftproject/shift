@@ -329,7 +329,7 @@ start_shift() {
     echo -n "Starting Shift... "
     forever_exists=$(whereis forever | awk {'print $2'})
     if [[ ! -z $forever_exists ]]; then
-        $forever_exists start -o $root_path/logs/shift_node.log -e $root_path/logs/shift_node_err.log app.js -c "$SHIFT_CONFIG" &>> $logfile || \
+        $forever_exists start -o $root_path/logs/shift_console.log -e $root_path/logs/shift_err.log app.js -c "$SHIFT_CONFIG" &>> $logfile || \
         { echo -e "\nCould not start Shift." && exit 1; }
     fi
 
@@ -343,6 +343,23 @@ start_shift() {
     return 1
 }
 
+  start_snapshot() {
+    echo -n "Starting Shift (snapshot mode) ... "
+    forever_exists=$(whereis forever | awk {'print $2'})
+    if [[ ! -z $forever_exists ]]; then
+        $forever_exists start -o $root_path/logs/snapshot_console.log -e $root_path/logs/snapshot_err.log app.js -c "$SHIFT_CONFIG" -s highest &>> $logfile || \
+        { echo -e "\nCould not start Shift." && exit 1; }
+    fi
+
+    sleep 2
+
+    if running; then
+        echo "OK"
+        return 0
+    fi
+    echo
+    return 1
+}
 
 running() {
     process=$(forever list |grep app.js |awk {'print $9'})
@@ -445,6 +462,10 @@ case $1 in
       parse_option $@
       start_shift
       show_blockHeight
+    ;;
+    "snapshot")
+      parse_option $@
+      start_snapshot
     ;;
     "stop")
       stop_shift
