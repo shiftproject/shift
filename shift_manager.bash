@@ -315,11 +315,13 @@ stop_shift() {
         $forever_exists stop $root_path/app.js &>> $logfile
     fi
 
+    sleep 2
+
     if ! running; then
         echo "OK"
         return 0
     fi
-
+    echo
     return 1
 }
 
@@ -327,7 +329,7 @@ start_shift() {
     echo -n "Starting Shift... "
     forever_exists=$(whereis forever | awk {'print $2'})
     if [[ ! -z $forever_exists ]]; then
-        $forever_exists start -o $root_path/logs/shift_node.log -e $root_path/logs/shift_node_err.log app.js &>> $logfile || \
+        $forever_exists start -o $root_path/logs/shift_node.log -e $root_path/logs/shift_node_err.log app.js -c "$SHIFT_CONFIG" &>> $logfile || \
         { echo -e "\nCould not start Shift." && exit 1; }
     fi
 
@@ -337,6 +339,7 @@ start_shift() {
         echo "OK"
         return 0
     fi
+    echo
     return 1
 }
 
@@ -357,10 +360,12 @@ show_blockHeight(){
 
 parse_option() {
   OPTIND=2
-  while getopts d:r:n opt
-  do
-    case $opt in
-      s) install_with_ssl=true ;;
+  while getopts c:x opt; do
+    case "$opt" in
+      c)
+        if [ -f "$OPTARG" ]; then
+          SHIFT_CONFIG="$OPTARG"
+        fi ;;
     esac
   done
 }
@@ -380,7 +385,6 @@ start_log() {
 
 case $1 in
     "install")
-      parse_option $@
       start_log
       install_prereq
       ntp_checks
@@ -438,6 +442,7 @@ case $1 in
       fi
     ;;
     "start")
+      parse_option $@
       start_shift
       show_blockHeight
     ;;
