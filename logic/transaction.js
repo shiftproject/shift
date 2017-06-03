@@ -210,13 +210,23 @@ Transaction.prototype.checkConfirmed = function (trs, cb) {
 Transaction.prototype.checkBalance = function (amount, balance, trs, sender) {
 	var exceededBalance = new bignum(sender[balance].toString()).lessThan(amount);
 	var exceeded = (trs.blockId !== genesisblock.block.id && exceededBalance);
+	var err;
+
+	if (exceeded)	{
+		err = [
+		'Account does not have enough SHIFT:', sender.address,
+		'balance:', new bignum(sender[balance].toString() || '0').div(Math.pow(10,8))
+		].join(' ');
+
+		if (exceptions.balance.indexOf(trs.id) > -1) {
+			this.scope.logger.debug(err, JSON.stringify(trs));
+			exceeded = false;
+		}
+	}
 
 	return {
 		exceeded: exceeded,
-		error: exceeded ? [
-			'Account does not have enough SHIFT:', sender.address,
-			'balance:', new bignum(sender[balance].toString() || '0').div(Math.pow(10,8))
-		].join(' ') : null
+		error: exceeded ? err : null
 	};
 };
 
