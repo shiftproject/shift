@@ -7,14 +7,7 @@ var __private = {};
 
 // Constructor
 function BlockReward () {
-	// Array of milestones
-	this.milestones = constants.rewards.milestones;
-
-	// Distance between each milestone
-	this.distance = Math.floor(constants.rewards.distance);
-
-	// Start rewards at block (n)
-	this.rewardOffset = Math.floor(constants.rewards.offset);
+	this.rewards = constants.rewards;
 }
 
 // Private methods
@@ -30,72 +23,37 @@ __private.parseHeight = function (height) {
 BlockReward.prototype.calcMilestone = function (height) {
 	height = __private.parseHeight(height);
 
-	var location = Math.trunc((height - this.rewardOffset) / this.distance);
-	var lastMile = this.milestones[this.milestones.length - 1];
-
-	if (location > (this.milestones.length - 1)) {
-		return this.milestones.lastIndexOf(lastMile);
-	} else {
-		return location;
+	for (var i=this.rewards.length-1; i>=0; i--)	{
+		if (height>=this.rewards[i].height) {
+			return i;
+		}
 	}
+	return 0;
 };
 
 BlockReward.prototype.calcReward = function (height) {
-	height = __private.parseHeight(height);
-
-	if (height < this.rewardOffset) {
-		return 0;
-	}
-    else if (height == 11) {
-        return 30000000;
-    }
-    else if (height == 12) {
-        return 20000000;
-    }
-    else {
-		return this.milestones[this.calcMilestone(height)];
-	}
+	return this.rewards[this.calcMilestone(height)].reward;
 };
 
 BlockReward.prototype.calcSupply = function (height) {
 	height = __private.parseHeight(height);
 
-	if (height < this.rewardOffset) {
-		// Rewards not started yet
-		return constants.totalAmount;
-	}
-
 	var milestone = this.calcMilestone(height);
 	var supply    = constants.totalAmount;
 	var rewards   = [];
 
-	var amount = 0, multiplier = 0;
+	var amount = 0;
 
-	// Remove offset from height
-	height -= this.rewardOffset - 1;
+	// sum up all completed milestonen
+	for (var i = 0; i < milestone; i++) {
+		amount = this.rewards[i+1].height-this.rewards[i].height;
+		height -= amount;
 
-	for (var i = 0; i < this.milestones.length; i++) {
-		if (milestone >= i) {
-			multiplier = this.milestones[i];
-
-			if (height < this.distance) {
-				// Measure this.distance thus far
-				amount = height % this.distance;
-			} else {
-				amount = this.distance; // Assign completed milestone
-				height -= this.distance; // Deduct from total height
-
-				// After last milestone
-				if (height > 0 && i === this.milestones.length - 1) {
-					amount += height;
-				}
-			}
-
-			rewards.push([amount, multiplier]);
-		} else {
-			break; // Milestone out of bounds
-		}
+		rewards.push([amount, this.rewards[i].reward]);
 	}
+
+	// add current milestone
+	rewards.push([height, this.rewards[milestone].reward]);
 
 	for (i = 0; i < rewards.length; i++) {
 		var reward = rewards[i];
