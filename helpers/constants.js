@@ -42,17 +42,17 @@ module.exports = {
 	],
 	numberLength: 100000000,
 	requestLength: 104,
-	rewards: {
-		milestones: [
-            100000000,  // Initial reward
-            70000000,  // Milestone 1
-            50000000,  // Milestone 2
-            30000000,  // Milestone 3
-            20000000   // Milestone 4
-		],
-		offset: 10,   // Start rewards at block (n)
-		distance: 1168000, // Distance between each milestone ~ 1 year
-	},
+	rewards: [
+		{ height: 1,        reward: 0},
+		{ height: 10,       reward: 100000000},
+		{ height: 11,       reward: 30000000},
+		{ height: 12,       reward: 20000000},
+		{ height: 13,       reward: 100000000},
+		{ height: 1168010,  reward: 70000000},
+		{ height: 2336010,  reward: 50000000},
+		{ height: 3504010,  reward: 30000000},
+		{ height: 4672010,  reward: 20000000},
+	],
 	signatureLength: 196,
 	totalAmount: 1009000000000000,
 	unconfirmedTransactionTimeOut: 10800 // 1080 blocks
