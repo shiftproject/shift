@@ -61,10 +61,10 @@ System.prototype.networkCompatible = function (nethash) {
 System.prototype.getMinVersion = function (height) {
 	height = height || modules.blocks.getLastBlock().height;
 
-	var minVer = "";
-	for ( var i = constants.minVersion.length - 1; i >= 0 && minVer == ""; --i ) {
+	var minVer = '';
+	for ( var i = constants.minVersion.length - 1; i >= 0 && minVer == ''; --i ) {
 		if (height>=constants.minVersion[i].height)
-			minVer = constants.minVersion[i].ver;
+			{minVer = constants.minVersion[i].ver;}
 	}
 
 	// update this.minVersion / this.minVersionChar, if necessary
@@ -75,7 +75,7 @@ System.prototype.getMinVersion = function (height) {
 			this.minVersionChar = minVer.charAt(minVer.length - 1);
 		} else {
 			this.minVersion = minVer;
-			this.minVersionChar = "";
+			this.minVersionChar = '';
 		}
 	}
 

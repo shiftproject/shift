@@ -45,7 +45,7 @@ function sendSHIFT (account, amount, done) {
 
 before(function (done) {
 	setTimeout(function () {
-    sendSHIFT(account, node.randomSHIFT(), done);
+		sendSHIFT(account, node.randomSHIFT(), done);
 	}, 2000);
 });
 
