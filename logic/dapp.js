@@ -3,6 +3,7 @@
 var ByteBuffer = require('bytebuffer');
 var constants = require('../helpers/constants.js');
 var dappCategories = require('../helpers/dappCategories.js');
+var dappAddresses = require('../helpers/dappAddresses.js');
 var sql = require('../sql/dapps.js');
 var valid_url = require('valid-url');
 
@@ -71,6 +72,18 @@ DApp.prototype.verify = function (trs, sender, cb) {
 
 	if (!foundCategory) {
 		return setImmediate(cb, 'Application category not found');
+	}
+
+	// allow official apps only
+	if (trs.asset.dapp.category !== dappCategories.Official) {
+		return setImmediate(cb, 'Application registration temporary disabled for non official apps.');
+	}
+
+	// check whitelist of dappAddresses (if defined)
+	if (dappAddresses[trs.asset.dapp.category]) {		// whitelist defined
+		if (dappAddresses[trs.asset.dapp.category].indexOf(sender.address) < 0) {
+			return setImmediate(cb, 'Sender address not allowed for this application category');
+		}
 	}
 
 	if (trs.asset.dapp.icon) {
