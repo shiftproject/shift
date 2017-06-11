@@ -1,0 +1,3 @@
+[submodule "test/shift-js"]
+	path = test/shift-js
+	url = https://github.com/ShiftNrg/shift-js.git
