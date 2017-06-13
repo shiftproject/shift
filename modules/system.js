@@ -122,6 +122,23 @@ System.prototype.getBroadhash = function (cb) {
 	});
 };
 
+System.prototype.getFees = function (height) {
+	height = height || modules.blocks.getLastBlock().height;
+
+	var i;
+	for (i=constants.feesArray.length-1; i>0; i--)	{
+		if (height>=constants.feesArray[i].height) {
+			break;
+		}
+	}
+	return {
+		fromHeight: constants.feesArray[i].height,
+		toHeight: i == constants.feesArray.length-1 ? null : constants.feesArray[i+1].height-1,
+		height: height,
+		fees: constants.feesArray[i].fees
+	};
+};
+
 System.prototype.update = function (cb) {
 	async.series({
 		getBroadhash: function (seriesCb) {
