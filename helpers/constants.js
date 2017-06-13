@@ -21,8 +21,30 @@ module.exports = {
 		multisignature: 500000000,
 		dapp: 2500000000
 	},
-	feeStart: 1,
-	feeStartVolume: 10000 * 100000000,
+	feesArray: [
+		{
+			height: 1,
+			fees: {
+				send: 10000000,		// 0.1
+				vote: 100000000,	// 1
+				secondsignature: 500000000,	// 5
+				delegate: 6000000000,	// 60
+				multisignature: 500000000, // 5
+				dapp: 2500000000	//25
+			}
+		},
+		{
+			height: 125000,
+			fees: {
+				send: 1000000,		// 0.01
+				vote: 100000000,	// 1
+				secondsignature: 10000000,	// 0.1
+				delegate: 6000000000,	// 60
+				multisignature: 50000000, // 0.5
+				dapp: 2500000000	//25
+			}
+		}
+	],
 	fixedPoint: Math.pow(10, 8),
 	maxAddressesLength: 208 * 128,
 	maxAmount: 100000000,

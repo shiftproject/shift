@@ -1519,7 +1519,13 @@ Blocks.prototype.shared = {
 			return setImmediate(cb, 'Blockchain is loading');
 		}
 
-		return setImmediate(cb, null, {fees: constants.fees});
+		library.schema.validate(req.body, schema.getFees, function (err) {
+			if (err) {
+				return setImmediate(cb, err[0].message);
+			}
+
+			return setImmediate(cb, null, modules.system.getFees(req.body.height));
+		});
 	},
 
 	getNethash: function (req, cb) {
