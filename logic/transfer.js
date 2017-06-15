@@ -21,8 +21,8 @@ Transfer.prototype.create = function (data, trs) {
 	return trs;
 };
 
-Transfer.prototype.calculateFee = function (trs, sender) {
-	return constants.fees.send;
+Transfer.prototype.calculateFee = function (trs, sender, height) {
+	return modules.system.getFees(height).fees.send;
 };
 
 Transfer.prototype.verify = function (trs, sender, cb) {

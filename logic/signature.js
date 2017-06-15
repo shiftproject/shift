@@ -24,8 +24,8 @@ Signature.prototype.create = function (data, trs) {
 	return trs;
 };
 
-Signature.prototype.calculateFee = function (trs, sender) {
-	return constants.fees.secondsignature;
+Signature.prototype.calculateFee = function (trs, sender, height) {
+	return modules.system.getFees(height).fees.secondsignature;
 };
 
 Signature.prototype.verify = function (trs, sender, cb) {

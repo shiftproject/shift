@@ -333,10 +333,6 @@ Block.prototype.getHash = function (block) {
 	return crypto.createHash('sha256').update(this.getBytes(block)).digest();
 };
 
-Block.prototype.calculateFee = function (block) {
-	return constants.fees.send;
-};
-
 Block.prototype.dbRead = function (raw) {
 	if (!raw.b_id) {
 		return null;
