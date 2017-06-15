@@ -13,14 +13,6 @@ module.exports = {
 	blockReceiptTimeOut: 27*2, // 2 blocks
 	confirmationLength: 77,
 	epochTime: new Date(Date.UTC(2016, 4, 24, 17, 0, 0, 0)),
-	fees: {
-		send: 10000000,
-		vote: 100000000,
-		secondsignature: 500000000,
-		delegate: 6000000000,
-		multisignature: 500000000,
-		dapp: 2500000000
-	},
 	feesArray: [
 		{
 			height: 1,

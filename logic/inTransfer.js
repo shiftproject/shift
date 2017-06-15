@@ -27,8 +27,8 @@ InTransfer.prototype.create = function (data, trs) {
 	return trs;
 };
 
-InTransfer.prototype.calculateFee = function (trs, sender) {
-	return constants.fees.send;
+InTransfer.prototype.calculateFee = function (trs, sender, height) {
+	return modules.system.getFees(height).fees.send;
 };
 
 InTransfer.prototype.verify = function (trs, sender, cb) {

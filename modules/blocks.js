@@ -579,7 +579,7 @@ __private.checkTransaction = function (block, transaction, cb) {
 		function (sender, waterCb) {
 			// Check if transaction id valid against database state (mem_* tables).
 			// DATABASE: read only
-			library.logic.transaction.verify(transaction, sender, waterCb);
+			library.logic.transaction.verify(transaction, sender, block.height, waterCb);
 		}
 	], function (err) {
 		return setImmediate(cb, err);
@@ -1031,7 +1031,7 @@ Blocks.prototype.generateBlock = function (keypair, timestamp, cb) {
 			}
 
 			if (library.logic.transaction.ready(transaction, sender)) {
-				library.logic.transaction.verify(transaction, sender, function (err) {
+				library.logic.transaction.verify(transaction, sender, null, function (err) {
 					ready.push(transaction);
 					return setImmediate(cb);
 				});
@@ -1511,7 +1511,16 @@ Blocks.prototype.shared = {
 			return setImmediate(cb, 'Blockchain is loading');
 		}
 
-		return setImmediate(cb, null, {fee: library.logic.block.calculateFee()});
+		library.schema.validate(req.body, schema.getFee, function (err) {
+			if (err) {
+				return setImmediate(cb, err[0].message);
+			}
+			var f = modules.system.getFees(req.body.height);
+			f.fee = f.fees.send;
+			delete f.fees;
+
+			return setImmediate(cb, null, f);
+		});
 	},
 
 	getFees: function (req, cb) {

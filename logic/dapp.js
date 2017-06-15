@@ -39,8 +39,8 @@ DApp.prototype.create = function (data, trs) {
 	return trs;
 };
 
-DApp.prototype.calculateFee = function (trs, sender) {
-	return constants.fees.dapp;
+DApp.prototype.calculateFee = function (trs, sender, height) {
+	return modules.system.getFees(height).fees.dapp;
 };
 
 DApp.prototype.verify = function (trs, sender, cb) {

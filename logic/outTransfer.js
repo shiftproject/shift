@@ -29,8 +29,8 @@ OutTransfer.prototype.create = function (data, trs) {
 	return trs;
 };
 
-OutTransfer.prototype.calculateFee = function (trs, sender) {
-	return constants.fees.send;
+OutTransfer.prototype.calculateFee = function (trs, sender, height) {
+	return modules.system.getFees(height).fees.send;
 };
 
 OutTransfer.prototype.verify = function (trs, sender, cb) {

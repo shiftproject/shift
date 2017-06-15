@@ -123,7 +123,7 @@ System.prototype.getBroadhash = function (cb) {
 };
 
 System.prototype.getFees = function (height) {
-	height = height || modules.blocks.getLastBlock().height;
+	height = height || modules.blocks.getLastBlock().height+1;
 
 	var i;
 	for (i=constants.feesArray.length-1; i>0; i--)	{
@@ -131,6 +131,7 @@ System.prototype.getFees = function (height) {
 			break;
 		}
 	}
+
 	return {
 		fromHeight: constants.feesArray[i].height,
 		toHeight: i == constants.feesArray.length-1 ? null : constants.feesArray[i+1].height-1,

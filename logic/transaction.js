@@ -57,7 +57,7 @@ Transaction.prototype.create = function (data) {
 
 	trs.id = this.getId(trs);
 
-	trs.fee = __private.types[trs.type].calculateFee.call(this, trs, data.sender) || false;
+	trs.fee = __private.types[trs.type].calculateFee.call(this, trs, data.sender, null) || false;
 
 	return trs;
 };
@@ -269,13 +269,14 @@ Transaction.prototype.process = function (trs, sender, requester, cb) {
 	}.bind(this));
 };
 
-Transaction.prototype.verify = function (trs, sender, requester, cb) {
+// it seems there is no call with param 'requester'
+Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) {
 	var valid = false;
 	var err = null;
 
-	if (typeof requester === 'function') {
-		cb = requester;
-	}
+//	if (typeof requester === 'function') {
+//		cb = requester;
+//	}
 
 	// Check sender
 	if (!sender) {
@@ -298,14 +299,14 @@ Transaction.prototype.verify = function (trs, sender, requester, cb) {
 	}
 
 	// Check for missing requester second signature
-	if (trs.requesterPublicKey && requester.secondSignature && !trs.signSignature) {
-		return setImmediate(cb, 'Missing requester second signature');
-	}
+//	if (trs.requesterPublicKey && requester.secondSignature && !trs.signSignature) {
+//		return setImmediate(cb, 'Missing requester second signature');
+//	}
 
 	// If second signature provided, check if requester has one enabled
-	if (trs.requesterPublicKey && !requester.secondSignature && (trs.signSignature && trs.signSignature.length > 0)) {
-		return setImmediate(cb, 'Requester does not have a second signature');
-	}
+//	if (trs.requesterPublicKey && !requester.secondSignature && (trs.signSignature && trs.signSignature.length > 0)) {
+//		return setImmediate(cb, 'Requester does not have a second signature');
+//	}
 
 	// Check sender public key
 	if (sender.publicKey && sender.publicKey !== trs.senderPublicKey) {
@@ -372,10 +373,10 @@ Transaction.prototype.verify = function (trs, sender, requester, cb) {
 	}
 
 	// Verify second signature
-	if (requester.secondSignature || sender.secondSignature) {
+	if (/*requester.secondSignature ||*/ sender.secondSignature) {
 		try {
 			valid = false;
-			valid = this.verifySecondSignature(trs, (requester.secondPublicKey || sender.secondPublicKey), trs.signSignature);
+			valid = this.verifySecondSignature(trs, (/*requester.secondPublicKey ||*/ sender.secondPublicKey), trs.signSignature);
 		} catch (e) {
 			return setImmediate(cb, e.toString());
 		}
@@ -419,7 +420,8 @@ Transaction.prototype.verify = function (trs, sender, requester, cb) {
 	}
 
 	// Calculate fee
-	var fee = __private.types[trs.type].calculateFee.call(this, trs, sender) || false;
+	var fee = __private.types[trs.type].calculateFee.call(this, trs, sender, height) || false;
+
 	if (!fee || trs.fee !== fee) {
 		return setImmediate(cb, 'Invalid transaction fee');
 	}

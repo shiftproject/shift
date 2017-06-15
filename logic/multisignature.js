@@ -32,8 +32,8 @@ Multisignature.prototype.create = function (data, trs) {
 	return trs;
 };
 
-Multisignature.prototype.calculateFee = function (trs, sender) {
-	return (trs.asset.multisignature.keysgroup.length + 1) * constants.fees.multisignature;
+Multisignature.prototype.calculateFee = function (trs, sender, height) {
+	return (trs.asset.multisignature.keysgroup.length + 1) * modules.system.getFees(height).fees.multisignature;
 };
 
 Multisignature.prototype.verify = function (trs, sender, cb) {

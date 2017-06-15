@@ -461,7 +461,7 @@ __private.processVerifyTransaction = function (transaction, broadcast, cb) {
 			});
 		},
 		function verifyTransaction (sender, waterCb) {
-			library.logic.transaction.verify(transaction, sender, function (err) {
+			library.logic.transaction.verify(transaction, sender, null, function (err) {
 				if (err) {
 					return setImmediate(waterCb, err);
 				} else {
