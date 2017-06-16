@@ -126,17 +126,17 @@ System.prototype.getFees = function (height) {
 	height = height || modules.blocks.getLastBlock().height+1;
 
 	var i;
-	for (i=constants.feesArray.length-1; i>0; i--)	{
-		if (height>=constants.feesArray[i].height) {
+	for (i=constants.fees.length-1; i>0; i--)	{
+		if (height>=constants.fees[i].height) {
 			break;
 		}
 	}
 
 	return {
-		fromHeight: constants.feesArray[i].height,
-		toHeight: i == constants.feesArray.length-1 ? null : constants.feesArray[i+1].height-1,
+		fromHeight: constants.fees[i].height,
+		toHeight: i == constants.fees.length-1 ? null : constants.fees[i+1].height-1,
 		height: height,
-		fees: constants.feesArray[i].fees
+		fees: constants.fees[i].fees
 	};
 };
 
