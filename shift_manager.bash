@@ -288,6 +288,11 @@ update_client() {
 
 update_wallet() {
 
+    if [[ ! -d "public" ]]; then
+      install_webui
+      return 0;
+    fi
+
     echo -n "Updating Shift wallet ... "
 
     cd public
