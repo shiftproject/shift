@@ -26,7 +26,7 @@ module.exports = {
 			}
 		},
 		{
-			height: 125000,
+			height: 640000,
 			fees: {
 				send: 1000000,		// 0.01
 				vote: 100000000,	// 1
