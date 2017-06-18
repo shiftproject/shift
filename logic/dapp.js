@@ -8,7 +8,7 @@ var sql = require('../sql/dapps.js');
 var valid_url = require('valid-url');
 
 // Private fields
-var library, __private = {};
+var modules, library, __private = {};
 
 __private.unconfirmedNames = {};
 __private.unconfirmedLinks = {};
@@ -19,6 +19,7 @@ function DApp () {}
 
 // Public methods
 DApp.prototype.bind = function (scope) {
+	modules = scope.modules;
 	library = scope.library;
 };
 
