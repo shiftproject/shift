@@ -27,9 +27,9 @@ node.baseUrl = 'http://' + node.config.address + ':' + node.config.port;
 node.api = node.supertest(node.baseUrl);
 
 node.normalizer = 100000000; // Use this to convert SHIFT amount to normal value
-node.blockTime = constants.blockTime; // Block time in miliseconds
-node.blockTimePlus = constants.blockTime+2000; // Block time + 2 seconds in miliseconds
-node.version = constants.currentVersion; // Node version
+node.blockTime = node.constants.blockTime; // Block time in miliseconds
+node.blockTimePlus = node.constants.blockTime+2000; // Block time + 2 seconds in miliseconds
+node.version = node.constants.currentVersion; // Node version
 
 // Transaction fees
 node.fees = {

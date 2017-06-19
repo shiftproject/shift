@@ -61,10 +61,10 @@ System.prototype.networkCompatible = function (nethash) {
 System.prototype.getMinVersion = function (height) {
 	height = height || modules.blocks.getLastBlock().height;
 
-	var minVer = "";
-	for ( var i = constants.minVersion.length - 1; i >= 0 && minVer == ""; --i ) {
+	var minVer = '';
+	for ( var i = constants.minVersion.length - 1; i >= 0 && minVer == ''; --i ) {
 		if (height>=constants.minVersion[i].height)
-			minVer = constants.minVersion[i].ver;
+			{minVer = constants.minVersion[i].ver;}
 	}
 
 	// update this.minVersion / this.minVersionChar, if necessary
@@ -75,7 +75,7 @@ System.prototype.getMinVersion = function (height) {
 			this.minVersionChar = minVer.charAt(minVer.length - 1);
 		} else {
 			this.minVersion = minVer;
-			this.minVersionChar = "";
+			this.minVersionChar = '';
 		}
 	}
 
@@ -120,6 +120,24 @@ System.prototype.getBroadhash = function (cb) {
 		library.logger.error(err.stack);
 		return setImmediate(cb, err);
 	});
+};
+
+System.prototype.getFees = function (height) {
+	height = height || modules.blocks.getLastBlock().height+1;
+
+	var i;
+	for (i=constants.fees.length-1; i>0; i--)	{
+		if (height>=constants.fees[i].height) {
+			break;
+		}
+	}
+
+	return {
+		fromHeight: constants.fees[i].height,
+		toHeight: i == constants.fees.length-1 ? null : constants.fees[i+1].height-1,
+		height: height,
+		fees: constants.fees[i].fees
+	};
 };
 
 System.prototype.update = function (cb) {

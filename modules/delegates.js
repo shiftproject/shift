@@ -712,7 +712,16 @@ Delegates.prototype.shared = {
 	},
 
 	getFee: function (req, cb) {
-		return setImmediate(cb, null, {fee: constants.fees.delegate});
+		library.schema.validate(req.body, schema.getFee, function (err) {
+			if (err) {
+				return setImmediate(cb, err[0].message);
+			}
+
+			var f = modules.system.getFees(req.body.height);
+			f.fee = f.fees.delegate;
+			delete f.fees;
+			return setImmediate(cb, null, f);
+		});
 	},
 
 	getForgedByAccount: function (req, cb) {

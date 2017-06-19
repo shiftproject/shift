@@ -49,8 +49,8 @@ install_prereq() {
     { echo "Could not update apt repositories. Run apt-get update manually. Exiting." && exit 1; };
     echo -e "done.\n"
 
-    echo -n "Running: apt-get install curl build-essential python lsb-release wget openssl autoconf libtool automake libsodium-dev... ";
-    sudo apt-get install -y -qq curl build-essential python lsb-release wget openssl autoconf libtool automake libsodium-dev &>> $logfile || \
+    echo -n "Running: apt-get install curl build-essential python lsb-release wget openssl autoconf libtool automake libsodium-dev jq dig... ";
+    sudo apt-get install -y -qq curl build-essential python lsb-release wget openssl autoconf libtool automake libsodium-dev jq dig &>> $logfile || \
     { echo "Could not install packages prerequisites. Exiting." && exit 1; };
     echo -e "done.\n"
 
@@ -85,7 +85,7 @@ ntp_checks() {
     # Install NTP or Chrony for Time Management - Physical Machines only
     if [[ ! -f "/proc/user_beancounters" ]]; then
       if ! sudo pgrep -x "ntpd" > /dev/null; then
-        echo -n "\nInstalling NTP... "
+        echo -n "Installing NTP... "
         sudo apt-get install ntp -yyq &>> $logfile
         sudo service ntp stop &>> $logfile
         sudo ntpdate pool.ntp.org &>> $logfile
@@ -288,6 +288,11 @@ update_client() {
 
 update_wallet() {
 
+    if [[ ! -d "public" ]]; then
+      install_webui
+      return 0;
+    fi
+
     echo -n "Updating Shift wallet ... "
 
     cd public
@@ -393,6 +398,56 @@ rebuild_shift() {
   restore_blockchain
 }
 
+install_ipfs() {
+  if [ ! -x "$(command -v jq)" ]; then
+      echo -n "jq is not installed. Installing jq ... "
+      sudo apt-get install -y -qq jq  &> /dev/null || { echo "Could not install jq. Exiting." && exit 1; };
+      echo -e "done.\n"
+  fi
+  if [ ! -x "$(command -v dig)" ]; then
+      echo -n "dig is not installed. Installing dig ... "
+      sudo apt-get install -y -qq dnsutils  &> /dev/null || { echo "Could not install dig. Exiting." && exit 1; };
+      echo -e "done.\n"
+  fi
+
+  # Move the binary to /usr/local/bin/
+  if [ ! -f $root_path/bin/ipfs ]; then
+      echo -e "\nIPFS binary not found!" && exit 1;
+  else
+      sudo cp $root_path/bin/ipfs /usr/local/bin/ipfs
+  fi
+
+  # IPFS initialise
+  if [ ! -f /usr/local/bin/ipfs ]; then
+      echo -e "\n/usr/local/bin/ipfs does not exist!" && exit 1;
+  else
+      sudo chmod 755 /usr/local/bin/ipfs
+      ipfs init
+  fi
+
+  PORT="$(jq .port $SHIFT_CONFIG)"
+  SPORT="$(jq .ssl.options.port $SHIFT_CONFIG)"
+
+  # Check if ipfs config exists
+  if [ ! -f ~/.ipfs/config ]; then
+      echo -e "\nIPFS installation failed.." && exit 1;
+  else
+      echo -e "Pushing IPFS config..." && sleep 2;
+      MYIP=$(dig +short myip.opendns.com @resolver1.opendns.com)
+      ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin "[\"https://$MYIP:$SPORT\",\"http://$MYIP:$PORT\",\"https://127.0.0.1:$SPORT\",\"http://127.0.0.1:$PORT\"]"
+      ipfs config --json API.HTTPHeaders.Access-Control-Allow-Methods '["PUT", "GET", "POST"]'
+      ipfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials '["true"]'
+      ipfs config --json Addresses.API '"/ip4/0.0.0.0/tcp/5001"'
+      ipfs config --json Addresses.Gateway '"/ip4/0.0.0.0/tcp/8080"'
+
+      if [[ $(ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin) = *$MYIP* ]]; then
+        echo -e "\nIPFS succesfully installed!";
+      else
+        echo -e "\nError pushing IPFS config!!" && exit 1;
+      fi
+  fi
+}
+
 start_log() {
   echo "Starting $0... " > $logfile
   echo -n "Date: " >> $logfile
@@ -435,6 +490,9 @@ case $1 in
       start_shift
       show_blockHeight
     ;;
+    "install_ipfs")
+      install_ipfs
+    ;;
     "reload")
       stop_shift
       sleep 2
@@ -472,7 +530,7 @@ case $1 in
     ;;
 
 *)
-    echo 'Available options: install, reload (stop/start), rebuild (official snapshot), start, stop, update_manager, update_client, update_wallet'
+    echo 'Available options: install, install_ipfs, reload (stop/start), rebuild (official snapshot), start, stop, update_manager, update_client, update_wallet'
     echo 'Usage: ./shift_installer.bash install'
     exit 1
 ;;

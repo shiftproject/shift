@@ -26,8 +26,8 @@ Vote.prototype.create = function (data, trs) {
 	return trs;
 };
 
-Vote.prototype.calculateFee = function (trs, sender) {
-	return constants.fees.vote;
+Vote.prototype.calculateFee = function (trs, sender, height) {
+	return modules.system.getFees(height).fees.vote;
 };
 
 Vote.prototype.verify = function (trs, sender, cb) {

@@ -66,6 +66,16 @@ module.exports = {
 			}
 		}
 	},
+	getFees: {
+		id: 'blocks.getFees',
+		type: 'object',
+		properties: {
+			height: {
+				type: 'integer',
+				minimum: 1
+			}
+		}
+	},
 	getCommonBlock: {
 		id: 'blocks.getCommonBlock',
 		type: 'object',

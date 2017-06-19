@@ -29,8 +29,8 @@ Delegate.prototype.create = function (data, trs) {
 	return trs;
 };
 
-Delegate.prototype.calculateFee = function (trs, sender) {
-	return constants.fees.delegate;
+Delegate.prototype.calculateFee = function (trs, sender, height) {
+	return modules.system.getFees(height).fees.delegate;
 };
 
 Delegate.prototype.verify = function (trs, sender, cb) {

@@ -1,10 +1,11 @@
 'use strict';
 
 module.exports = {
-	currentVersion: "6.4.1t",
+	currentVersion: '6.5.0t',
 	minVersion: [
-		{ height: 1,      ver: "^6.0.1t"},
-		{ height: 370000, ver: "^6.3.0t"}
+		{ height: 1,      ver: '^6.0.1t'},
+		{ height: 370000, ver: '^6.3.0t'},
+		{ height: 640000, ver: '^6.5.0t'}
 	],
 	activeDelegates: 101,
 	addressLength: 208,
@@ -13,16 +14,30 @@ module.exports = {
 	blockReceiptTimeOut: 27*2, // 2 blocks
 	confirmationLength: 77,
 	epochTime: new Date(Date.UTC(2016, 4, 24, 17, 0, 0, 0)),
-	fees: {
-		send: 10000000,
-		vote: 100000000,
-		secondsignature: 500000000,
-		delegate: 6000000000,
-		multisignature: 500000000,
-		dapp: 2500000000
-	},
-	feeStart: 1,
-	feeStartVolume: 10000 * 100000000,
+	fees: [
+		{
+			height: 1,
+			fees: {
+				send: 10000000,		// 0.1
+				vote: 100000000,	// 1
+				secondsignature: 500000000,	// 5
+				delegate: 6000000000,	// 60
+				multisignature: 500000000, // 5
+				dapp: 2500000000	//25
+			}
+		},
+		{
+			height: 640000,
+			fees: {
+				send: 1000000,		// 0.01
+				vote: 100000000,	// 1
+				secondsignature: 10000000,	// 0.1
+				delegate: 6000000000,	// 60
+				multisignature: 50000000, // 0.5
+				dapp: 2500000000	//25
+			}
+		}
+	],
 	fixedPoint: Math.pow(10, 8),
 	maxAddressesLength: 208 * 128,
 	maxAmount: 100000000,
@@ -42,17 +57,18 @@ module.exports = {
 	],
 	numberLength: 100000000,
 	requestLength: 104,
-	rewards: {
-		milestones: [
-            100000000,  // Initial reward
-            70000000,  // Milestone 1
-            50000000,  // Milestone 2
-            30000000,  // Milestone 3
-            20000000   // Milestone 4
-		],
-		offset: 10,   // Start rewards at block (n)
-		distance: 1168000, // Distance between each milestone ~ 1 year
-	},
+	rewards: [
+		{ height: 1,        reward: 0},
+		{ height: 10,       reward: 100000000},
+		{ height: 11,       reward: 30000000},
+		{ height: 12,       reward: 20000000},
+		{ height: 13,       reward: 100000000},
+		{ height: 640000,   reward: 110000000},
+		{ height: 1808000,  reward: 90000000},
+		{ height: 2976000,  reward: 70000000},
+		{ height: 4144000,  reward: 50000000},
+		{ height: 5312000,  reward: 30000000},
+	],
 	signatureLength: 196,
 	totalAmount: 1009000000000000,
 	unconfirmedTransactionTimeOut: 10800 // 1080 blocks
