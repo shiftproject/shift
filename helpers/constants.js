@@ -4,7 +4,8 @@ module.exports = {
 	currentVersion: '6.4.1',
 	minVersion: [
 		{ height: 1,      ver: '^6.1.0'},
-		{ height: 600000, ver: '^6.3.0'}
+		{ height: 600000, ver: '^6.3.0'},
+		{ height: 828000, ver: '^6.5.0'}
 	],
 	activeDelegates: 101,
 	addressLength: 208,
@@ -26,7 +27,7 @@ module.exports = {
 			}
 		},
 		{
-			height: 125000,
+			height: 828000,
 			fees: {
 				send: 1000000,		// 0.01
 				vote: 100000000,	// 1
@@ -62,11 +63,11 @@ module.exports = {
 		{ height: 11,       reward: 30000000},
 		{ height: 12,       reward: 20000000},
 		{ height: 13,       reward: 100000000},
-		{ height: 640000,   reward: 110000000},
-		{ height: 1808000,  reward: 90000000},
-		{ height: 2976000,  reward: 70000000},
-		{ height: 4144000,  reward: 50000000},
-		{ height: 5312000,  reward: 30000000},
+		{ height: 828000,   reward: 110000000},
+		{ height: 1996000,  reward: 90000000},
+		{ height: 3164000,  reward: 70000000},
+		{ height: 4332000,  reward: 50000000},
+		{ height: 5500000,  reward: 30000000},
 	],
 	signatureLength: 196,
 	totalAmount: 1009000000000000,
