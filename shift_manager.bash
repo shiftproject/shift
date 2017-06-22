@@ -49,8 +49,8 @@ install_prereq() {
     { echo "Could not update apt repositories. Run apt-get update manually. Exiting." && exit 1; };
     echo -e "done.\n"
 
-    echo -n "Running: apt-get install curl build-essential python lsb-release wget openssl autoconf libtool automake libsodium-dev jq dig... ";
-    sudo apt-get install -y -qq curl build-essential python lsb-release wget openssl autoconf libtool automake libsodium-dev jq dig &>> $logfile || \
+    echo -n "Running: apt-get install curl build-essential python lsb-release wget openssl autoconf libtool automake libsodium-dev jq dnsutils ... ";
+    sudo apt-get install -y -qq curl build-essential python lsb-release wget openssl autoconf libtool automake libsodium-dev jq dnsutils &>> $logfile || \
     { echo "Could not install packages prerequisites. Exiting." && exit 1; };
     echo -e "done.\n"
 
@@ -405,7 +405,7 @@ install_ipfs() {
       echo -e "done.\n"
   fi
   if [ ! -x "$(command -v dig)" ]; then
-      echo -n "dig is not installed. Installing dig ... "
+      echo -n "dig is not installed. Installing dnsutils ... "
       sudo apt-get install -y -qq dnsutils  &> /dev/null || { echo "Could not install dig. Exiting." && exit 1; };
       echo -e "done.\n"
   fi
