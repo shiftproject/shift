@@ -9,6 +9,7 @@ root_path=$(pwd)
 
 mkdir -p $root_path/logs
 logfile=$root_path/logs/shift_manager.log
+ipfs_log=$root_path/logs/ipfs.log
 
 set_network() {
   if [ "$(grep "7337a324ef27e1e234d1e9018cacff7d4f299a09c2df9be460543b8f7ef652f1" $SHIFT_CONFIG )" ];then
@@ -410,6 +411,13 @@ install_ipfs() {
       echo -e "done.\n"
   fi
 
+  # Check if IPFS is already installed
+  ipfs_exists=$(whereis ipfs | awk {'print $2'})
+    if [[ ! -z $ipfs_exists ]]; then
+      echo -e "IPFS is already installed. Remove it first with ./shift_manager.bash remove_ipfs"
+      exit 1;
+    fi
+
   # Move the binary to /usr/local/bin/
   if [ ! -f $root_path/bin/ipfs ]; then
       echo -e "\nIPFS binary not found!" && exit 1;
@@ -439,12 +447,84 @@ install_ipfs() {
       ipfs config --json API.HTTPHeaders.Access-Control-Allow-Credentials '["true"]'
       ipfs config --json Addresses.API '"/ip4/0.0.0.0/tcp/5001"'
       ipfs config --json Addresses.Gateway '"/ip4/0.0.0.0/tcp/8080"'
+      BOOTSTRAP=$(ipfs config Bootstrap)
+      BOOTSTRAP=$(echo $BOOTSTRAP | jq ' .+ ["/ip4/213.32.16.10/tcp/4001/ipfs/QmcWjSF6prpJwBZsfPSfzGEL61agU1vcMNCX8K6qaH5PAq"]')
+      ipfs config --json Bootstrap "$BOOTSTRAP"
 
       if [[ $(ipfs config --json API.HTTPHeaders.Access-Control-Allow-Origin) = *$MYIP* ]]; then
         echo -e "\nIPFS succesfully installed!";
       else
         echo -e "\nError pushing IPFS config!!" && exit 1;
       fi
+  fi
+}
+
+remove_ipfs() {
+  echo -e "Removing IPFS from your system.."
+
+  if [[ -f /usr/local/bin/ipfs ]]; then
+    if sudo rm /usr/local/bin/ipfs; then
+      echo -e "Removed /usr/local/bin/ipfs"
+    else
+      echo -e "Unable to remove /usr/local/bin/ipfs"
+    fi
+  fi
+
+  if [ -d "$HOME/.ipfs" ]; then
+    if sudo rm -rf $HOME/.ipfs; then
+      echo -e "Removed $HOME/.ipfs"
+    else
+      echo -e "Unable to remove $HOME/.ipfs"
+    fi
+  fi
+
+  echo -e "Done."
+}
+
+start_ipfs() {
+  echo -e "Starting IPFS daemon.."
+
+  if ! sudo pgrep -x "ipfs" > /dev/null; then
+    ipfs daemon > $ipfs_log 2>&1 &
+    sleep 2
+    if ! sudo pgrep -x "ipfs" > /dev/null; then
+      echo -e "IPFS not started. Check the log file: $ipfs_log"
+      exit 1;
+    else
+      echo -e "IPFS started!"
+    fi
+  else
+    echo -e "IPFS already running.."
+  fi
+}
+
+stop_ipfs() {
+  echo -e "Stopping IPFS daemon.."
+
+  if ! sudo pgrep -x "ipfs" > /dev/null; then
+    echo -e "IPFS not running.."
+    exit 1;
+  else
+    pgrep ipfs | xargs kill
+    sleep 2
+
+    if ! sudo pgrep -x "ipfs" > /dev/null; then
+      echo -e "IPFS stopped!"
+    else
+      echo -e "IPFS still running.."
+      exit 1;
+    fi
+  fi
+}
+
+check_ipfs() {
+  echo -e "Checking if IPFS is running.."
+
+  if ! sudo pgrep -x "ipfs" > /dev/null; then
+    echo -e "IPFS not running.."
+    exit 1;
+  else
+    echo -e "IPFS is runnning!"
   fi
 }
 
@@ -493,6 +573,18 @@ case $1 in
     "install_ipfs")
       install_ipfs
     ;;
+    "remove_ipfs")
+      remove_ipfs
+    ;;
+    "start_ipfs")
+      start_ipfs
+    ;;
+    "stop_ipfs")
+      stop_ipfs
+    ;;
+    "check_ipfs")
+      check_ipfs
+    ;;
     "reload")
       stop_shift
       sleep 2
@@ -530,7 +622,7 @@ case $1 in
     ;;
 
 *)
-    echo 'Available options: install, install_ipfs, reload (stop/start), rebuild (official snapshot), start, stop, update_manager, update_client, update_wallet'
+    echo 'Available options: install, reload (stop/start), rebuild (official snapshot), start, stop, update_manager, update_client, update_wallet, install_ipfs, remove_ipfs, start_ipfs, stop_ipfs, check_ipfs'
     echo 'Usage: ./shift_installer.bash install'
     exit 1
 ;;
