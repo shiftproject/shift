@@ -214,8 +214,8 @@ Transaction.prototype.checkBalance = function (amount, balance, trs, sender) {
 
 	if (exceeded)	{
 		err = [
-		'Account does not have enough SHIFT:', sender.address,
-		'balance:', new bignum(sender[balance].toString() || '0').div(Math.pow(10,8))
+			'Account does not have enough SHIFT:', sender.address,
+			'balance:', new bignum(sender[balance].toString() || '0').div(Math.pow(10,8))
 		].join(' ');
 
 		if (exceptions.balance.indexOf(trs.id) > -1) {
@@ -323,8 +323,7 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 		err = ['Invalid sender public key:', trs.senderPublicKey, 'expected:', sender.publicKey].join(' ');
 
 		if (exceptions.senderPublicKey.indexOf(trs.id) > -1) {
-			this.scope.logger.debug(err);
-			this.scope.logger.debug(JSON.stringify(trs));
+			this.scope.logger.debug(err, JSON.stringify(trs));
 		} else {
 			return setImmediate(cb, err);
 		}
@@ -332,7 +331,13 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 
 	// Check sender is not genesis account unless block id equals genesis
 	if ([exceptions.genesisPublicKey.mainnet, exceptions.genesisPublicKey.testnet].indexOf(sender.publicKey) !== -1 && trs.blockId !== genesisblock.block.id) {
-		return setImmediate(cb, 'Invalid sender. Can not send from genesis account');
+		err = 'Invalid sender. Can not send from genesis account';
+
+		if (exceptions.sendFromGenesis.indexOf(trs.id) > -1) {
+			this.scope.logger.debug(err, JSON.stringify(trs));
+		} else {
+			return setImmediate(cb, err);
+		}
 	}
 
 	// Check sender address
@@ -369,6 +374,17 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 		return setImmediate(cb, e.toString());
 	}
 
+	if (!valid) {
+		try {
+			if (exceptions.signatures2[trs.id]) {
+				valid = this.verifySignature(trs, exceptions.signatures2[trs.id], trs.signature);
+				this.scope.logger.debug('Failed to verify signature. Validity after exception:', valid);
+			}
+		} catch (e) {
+			this.scope.logger.error(e.stack);
+			return setImmediate(cb, e.toString());
+		}
+	}
 	if (!valid) {
 		err = 'Failed to verify signature';
 
