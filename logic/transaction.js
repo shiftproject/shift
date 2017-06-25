@@ -214,12 +214,12 @@ Transaction.prototype.checkBalance = function (amount, balance, trs, sender) {
 
 	if (exceeded)	{
 		err = [
-		'Account does not have enough SHIFT:', sender.address,
-		'balance:', new bignum(sender[balance].toString() || '0').div(Math.pow(10,8))
+			'Account does not have enough SHIFT:', sender.address,
+			'balance:', new bignum(sender[balance].toString() || '0').div(Math.pow(10,8))
 		].join(' ');
 
 		if (exceptions.balance.indexOf(trs.id) > -1) {
-			this.scope.logger.debug(err, JSON.stringify(trs));
+			this.scope.logger.debug(err, trs);
 			exceeded = false;
 		}
 	}
@@ -323,8 +323,7 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 		err = ['Invalid sender public key:', trs.senderPublicKey, 'expected:', sender.publicKey].join(' ');
 
 		if (exceptions.senderPublicKey.indexOf(trs.id) > -1) {
-			this.scope.logger.debug(err);
-			this.scope.logger.debug(JSON.stringify(trs));
+			this.scope.logger.debug(err, trs);
 		} else {
 			return setImmediate(cb, err);
 		}
@@ -373,8 +372,7 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 		err = 'Failed to verify signature';
 
 		if (exceptions.signatures.indexOf(trs.id) > -1) {
-			this.scope.logger.debug(err);
-			this.scope.logger.debug(JSON.stringify(trs));
+			this.scope.logger.debug(err, trs);
 			valid = true;
 			err = null;
 		} else {
