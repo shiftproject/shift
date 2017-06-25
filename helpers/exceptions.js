@@ -11,9 +11,6 @@ module.exports = {
 	],
 	signatures: [
 	],
-	signatures2: { // tx with different signing key
-		'11653419223311016103':	'2796df1b3a0f7d09b1a65c818c6f3fa0026b2959c0e6ebc5ef36f855df627ddd'	// golden block
-	},
 	multisignatures: [
 		'8548637417376353222'   // 31814
 	],
@@ -115,10 +112,6 @@ module.exports = {
 		'13787590732444682913', // 70778
 		'15574682025014294681', // 70778
 		'4456755961607531316',  // 70785
-		'11653419223311016103'	// golden block
-	],
-	sendFromGenesis: [
-		'11653419223311016103'  // golden block
 	],
 	votes: [
 	]
