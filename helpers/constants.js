@@ -1,11 +1,11 @@
 'use strict';
 
 module.exports = {
-	currentVersion: '6.5.0',
+	currentVersion: '6.5.1',
 	minVersion: [
 		{ height: 1,      ver: '^6.1.0'},
 		{ height: 600000, ver: '^6.3.0'},
-		{ height: 828000, ver: '^6.5.0'}
+		{ height: 828000, ver: '^6.5.1'}
 	],
 	activeDelegates: 101,
 	addressLength: 208,
