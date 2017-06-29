@@ -76,6 +76,16 @@ module.exports = {
 			}
 		}
 	},
+	getStatus: {
+		id: 'blocks.getStatus',
+		type: 'object',
+		properties: {
+			height: {
+				type: 'integer',
+				minimum: 1
+			}
+		}
+	},
 	getCommonBlock: {
 		id: 'blocks.getCommonBlock',
 		type: 'object',
