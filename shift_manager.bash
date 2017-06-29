@@ -506,7 +506,7 @@ stop_ipfs() {
     exit 1;
   else
     pgrep ipfs | xargs kill
-    sleep 2
+    sleep 4
 
     if ! sudo pgrep -x "ipfs" > /dev/null; then
       echo -e "IPFS stopped!"

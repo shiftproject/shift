@@ -19,8 +19,8 @@ function DApp () {}
 
 // Public methods
 DApp.prototype.bind = function (scope) {
-	modules = scope.modules;
 	library = scope.library;
+	modules = library.modules;
 };
 
 DApp.prototype.create = function (data, trs) {

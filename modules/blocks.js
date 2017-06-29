@@ -1574,15 +1574,23 @@ Blocks.prototype.shared = {
 			return setImmediate(cb, 'Blockchain is loading');
 		}
 
-		return setImmediate(cb, null, {
-			broadhash: modules.system.getBroadhash(),
-			epoch: constants.epochTime,
-			height: __private.lastBlock.height,
-			fee: library.logic.block.calculateFee(),
-			milestone: __private.blockReward.calcMilestone(__private.lastBlock.height),
-			nethash: modules.system.getNethash(),
-			reward: __private.blockReward.calcReward(__private.lastBlock.height),
-			supply: __private.blockReward.calcSupply(__private.lastBlock.height)
+		library.schema.validate(req.body, schema.getStatus, function (err) {
+			if (err) {
+				return setImmediate(cb, err[0].message);
+			}
+
+			var height = req.body.height || __private.lastBlock.height;
+
+			return setImmediate(cb, null, {
+				broadhash: modules.system.getBroadhash(),
+				epoch: constants.epochTime,
+				height: height,
+				fee: modules.system.getFees(height).fees.send,
+				milestone: __private.blockReward.calcMilestone(height),
+				nethash: modules.system.getNethash(),
+				reward: __private.blockReward.calcReward(height),
+				supply: __private.blockReward.calcSupply(height)
+			});
 		});
 	}
 };
