@@ -400,6 +400,7 @@ rebuild_shift() {
 }
 
 install_ipfs() {
+  sudo apt-get update  &> /dev/null;
   if [ ! -x "$(command -v jq)" ]; then
       echo -n "jq is not installed. Installing jq ... "
       sudo apt-get install -y -qq jq  &> /dev/null || { echo "Could not install jq. Exiting." && exit 1; };
