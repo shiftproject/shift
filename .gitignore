@@ -1,6 +1,12 @@
 dapps/
 logs/
+docs/jsdoc/
 node_modules
 ssl/
 public/
-shift_manager.log
+stacktrace*
+test/.coverage-unit
+tmp
+sftp-config.json
+*.swp
+*.swo

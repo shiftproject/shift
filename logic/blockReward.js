@@ -5,12 +5,28 @@ var constants = require('../helpers/constants.js');
 // Private fields
 var __private = {};
 
+/**
+ * Initializes variables:
+ * - milestones
+ * - distance
+ * - rewardOffset
+ * @memberof module:blocks
+ * @class
+ * @classdesc Main BlockReward logic.
+ */
 // Constructor
 function BlockReward () {
 	this.rewards = constants.rewards;
 }
 
 // Private methods
+/**
+ * Returns absolute value from number.
+ * @private
+ * @param {number} height
+ * @return {number}
+ * @throws Invalid block height
+ */
 __private.parseHeight = function (height) {
 	if (isNaN(height)) {
 		throw 'Invalid block height';
@@ -20,6 +36,11 @@ __private.parseHeight = function (height) {
 };
 
 // Public methods
+/**
+ * @implements {__private.parseHeight}
+ * @param {number} height
+ * @return {number}
+ */
 BlockReward.prototype.calcMilestone = function (height) {
 	height = __private.parseHeight(height);
 
@@ -31,10 +52,22 @@ BlockReward.prototype.calcMilestone = function (height) {
 	return 0;
 };
 
+/**
+ * @implements {__private.parseHeight}
+ * @implements {BlockReward.calcMilestone}
+ * @param {number} height
+ * @return {number}
+ */
 BlockReward.prototype.calcReward = function (height) {
 	return this.rewards[this.calcMilestone(height)].reward;
 };
 
+/**
+ * @implements {__private.parseHeight}
+ * @implements {BlockReward.calcMilestone}
+ * @param {number} height
+ * @return {number}
+ */
 BlockReward.prototype.calcSupply = function (height) {
 	height = __private.parseHeight(height);
 
