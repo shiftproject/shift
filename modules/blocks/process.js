@@ -5,7 +5,7 @@ var constants = require('../../helpers/constants.js');
 var schema = require('../../schema/blocks.js');
 var slots = require('../../helpers/slots.js');
 var sql = require('../../sql/blocks.js');
-var sql_escape = require('../helpers/sql_escaping.js');
+var sql_escape = require('../../helpers/sql_escaping.js');
 
 var modules, library, self, __private = {};
 
