@@ -160,11 +160,11 @@ describe('POST /peer/transactions', function () {
 	});
 
 	it('using transaction with invalid recipientId should fail', function (done) {
-		var transaction = node.lisk.transaction.createTransaction('0123456789001234567890L', 1, node.gAccount.password);
+		var transaction = node.shift.transaction.createTransaction('0123456789001234567890L', 1, node.gAccount.password);
 
 		postTransaction(transaction, function (err, res) {
 			node.expect(res.body).to.have.property('success').to.be.not.ok;
-			node.expect(res.body).to.have.property('message').to.eql('Invalid transaction body');
+			node.expect(res.body).to.have.property('message').to.contain('Invalid transaction body');
 			done();
 		});
 	});
