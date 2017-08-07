@@ -123,7 +123,7 @@ System.prototype.networkCompatible = function (nethash) {
  * @return {string}
  */
 System.prototype.getMinVersion = function (height) {
-	height = height || modules.blocks.getLastBlock().height;
+	height = height || modules.blocks.lastBlock.get().height;
 
 	var minVer = '';
 	for ( var i = constants.minVersion.length - 1; i >= 0 && minVer == ''; --i ) {
@@ -200,7 +200,7 @@ System.prototype.getBroadhash = function (cb) {
 };
 
 System.prototype.getFees = function (height) {
-	height = height || modules.blocks.getLastBlock().height+1;
+	height = height || modules.blocks.lastBlock.get().height+1;
 
 	var i;
 	for (i=constants.fees.length-1; i>0; i--)	{
