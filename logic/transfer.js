@@ -20,10 +20,11 @@ function Transfer () {}
  * @param {Accounts} accounts
  * @param {Rounds} rounds
  */
-Transfer.prototype.bind = function (accounts, rounds) {
+Transfer.prototype.bind = function (accounts, rounds, system) {
 	modules = {
 		accounts: accounts,
 		rounds: rounds,
+		system: system
 	};
 };
 

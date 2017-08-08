@@ -8,7 +8,7 @@ var sql = require('../sql/dapps.js');
 var valid_url = require('valid-url');
 
 // Private fields
-var library, __private = {};
+var library, modules, __private = {};
 
 __private.unconfirmedNames = {};
 __private.unconfirmedLinks = {};
@@ -31,7 +31,6 @@ function DApp (db, logger, schema, network) {
 		logger: logger,
 		schema: schema,
 		network: network,
-		modules: null,
 	};
 }
 
@@ -39,8 +38,10 @@ function DApp (db, logger, schema, network) {
 /**
  * Binds scope.library.modules to private variable modules.
  */
-DApp.prototype.bind = function (scope) {
-	library.modules = scope.library.modules;
+DApp.prototype.bind = function (system) {
+	modules = {
+		system: system
+	};
 };
 
 /**
@@ -74,7 +75,7 @@ DApp.prototype.create = function (data, trs) {
  * @return {number} fee
  */
 DApp.prototype.calculateFee = function (trs, sender, height) {
-	return library.modules.system.getFees(height).fees.dapp;
+	return modules.system.getFees(height).fees.dapp;
 };
 
 /**

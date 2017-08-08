@@ -79,7 +79,8 @@ Signatures.prototype.onBind = function (scope) {
 	};
 
 	__private.assetTypes[transactionTypes.SIGNATURE].bind(
-		scope.accounts
+		scope.accounts,
+		scope.system
 	);
 };
 

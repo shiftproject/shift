@@ -244,7 +244,8 @@ Accounts.prototype.onBind = function (scope) {
 
 	__private.assetTypes[transactionTypes.VOTE].bind(
 		scope.delegates,
-		scope.rounds
+		scope.rounds,
+		scope.system
 	);
 };
 /**

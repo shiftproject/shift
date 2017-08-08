@@ -35,10 +35,11 @@ function Vote (logger, schema) {
  * @param {Delegates} delegates
  * @param {Rounds} rounds
  */
-Vote.prototype.bind = function (delegates, rounds) {
+Vote.prototype.bind = function (delegates, rounds, system) {
 	modules = {
 		delegates: delegates,
 		rounds: rounds,
+		system: system
 	};
 };
 

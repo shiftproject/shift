@@ -39,10 +39,11 @@ function Multisignature (schema, network, transaction, logger) {
  * @param {Rounds} rounds
  * @param {Accounts} accounts
  */
-Multisignature.prototype.bind = function (rounds, accounts) {
+Multisignature.prototype.bind = function (rounds, accounts, system) {
 	modules = {
 		rounds: rounds,
 		accounts: accounts,
+		system: system
 	};
 };
 

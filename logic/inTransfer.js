@@ -29,10 +29,11 @@ function InTransfer (db, schema) {
  * @param {Rounds} rounds
  * @param {Object} sharedApi
  */
-InTransfer.prototype.bind = function (accounts, rounds, sharedApi) {
+InTransfer.prototype.bind = function (accounts, rounds, sharedApi, system) {
 	modules = {
 		accounts: accounts,
 		rounds: rounds,
+		system: system
 	};
 	shared = sharedApi;
 };

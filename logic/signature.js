@@ -26,9 +26,10 @@ function Signature (schema, logger) {
  * Binds input parameters to private variable modules
  * @param {Accounts} accounts
  */
-Signature.prototype.bind = function (accounts) {
+Signature.prototype.bind = function (accounts, system) {
 	modules = {
 		accounts: accounts,
+		system: system
 	};
 };
 
