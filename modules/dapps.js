@@ -962,16 +962,22 @@ DApps.prototype.onBind = function (scope) {
 		sql: scope.sql,
 	};
 
+	__private.assetTypes[transactionTypes.DAPP].bind(
+		scope.system
+	);
+
 	__private.assetTypes[transactionTypes.IN_TRANSFER].bind(
 		scope.accounts,
 		scope.rounds,
-		shared
+		shared,
+		scope.system
 	);
 
 	__private.assetTypes[transactionTypes.OUT_TRANSFER].bind(
 		scope.accounts,
 		scope.rounds,
-		scope.dapps
+		scope.dapps,
+		scope.system
 	);
 };
 

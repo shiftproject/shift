@@ -260,6 +260,7 @@ API.prototype.getHeight = function (req, cb) {
 };
 
 API.prototype.getFee = function (req, cb) {
+
 	if (!__private.loaded) {
 		return setImmediate(cb, 'Blockchain is loading');
 	}
@@ -268,6 +269,7 @@ API.prototype.getFee = function (req, cb) {
 		if (err) {
 			return setImmediate(cb, err[0].message);
 		}
+
 		var f = modules.system.getFees(req.body.height);
 		f.fee = f.fees.send;
 		delete f.fees;
@@ -281,7 +283,7 @@ API.prototype.getFees = function (req, cb) {
 		return setImmediate(cb, 'Blockchain is loading');
 	}
 
-	library.schema.validate(req.body, library.schema.getFees, function (err) {
+	library.schema.validate(req.body, schema.getFees, function (err) {
 		if (err) {
 			return setImmediate(cb, err[0].message);
 		}
@@ -333,7 +335,7 @@ API.prototype.getStatus = function (req, cb) {
 		broadhash: modules.system.getBroadhash(),
 		epoch: constants.epochTime,
 		height: lastBlock.height,
-		fee: library.logic.block.calculateFee(),
+		fee: modules.system.getFees(lastBlock.height).fees.send,
 		milestone: __private.blockReward.calcMilestone(lastBlock.height),
 		nethash: modules.system.getNethash(),
 		reward: __private.blockReward.calcReward(lastBlock.height),

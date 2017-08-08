@@ -23,9 +23,10 @@ function Delegate (schema) {
  * Binds input parameters to private variables modules.
  * @param {Accounts} accounts
  */
-Delegate.prototype.bind = function (accounts) {
+Delegate.prototype.bind = function (accounts, system) {
 	modules = {
 		accounts: accounts,
+		system: system
 	};
 };
 

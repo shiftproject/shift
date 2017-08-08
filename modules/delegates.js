@@ -535,7 +535,8 @@ Delegates.prototype.onBind = function (scope) {
 	};
 
 	__private.assetTypes[transactionTypes.DELEGATE].bind(
-		scope.accounts
+		scope.accounts,
+		scope.system
 	);
 };
 

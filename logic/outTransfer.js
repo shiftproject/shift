@@ -33,11 +33,12 @@ function OutTransfer (db, schema, logger) {
  * @param {Rounds} rounds
  * @param {Dapps} dapps
  */
-OutTransfer.prototype.bind = function (accounts, rounds, dapps) {
+OutTransfer.prototype.bind = function (accounts, rounds, dapps, system) {
 	modules = {
 		accounts: accounts,
 		rounds: rounds,
 		dapps: dapps,
+		system: system
 	};
 };
 
