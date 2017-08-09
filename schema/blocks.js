@@ -76,6 +76,16 @@ module.exports = {
 			}
 		}
 	},
+	getFee: {
+		id: 'blocks.getFee',
+		type: 'object',
+		properties: {
+			height: {
+				type: 'integer',
+				minimum: 1
+			}
+		}
+	},
 	getStatus: {
 		id: 'blocks.getStatus',
 		type: 'object',

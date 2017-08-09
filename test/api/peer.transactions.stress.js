@@ -27,7 +27,7 @@ describe('POST /peer/transactions', function () {
 				var bundled = [];
 
 				for (var i = 0; i < node.config.broadcasts.releaseLimit; i++) {
-					var transaction = node.lisk.transaction.createTransaction(
+					var transaction = node.shift.transaction.createTransaction(
 						node.randomAccount().address,
 						node.randomNumber(100000000, 1000000000),
 						node.gAccount.password
@@ -50,7 +50,7 @@ describe('POST /peer/transactions', function () {
 		});
 
 		it('should confirm all transactions', function (done) {
-			var blocksToWait = maximum / node.constants.maxTxsPerBlock + 1;
+			var blocksToWait = Math.ceil(maximum / node.constants.maxTxsPerBlock);
 			node.waitForBlocks(blocksToWait, function (err) {
 				node.async.eachSeries(transactions, function (transaction, eachSeriesCb) {
 					node.get('/api/transactions/get?id=' + transaction.id, function (err, res) {
@@ -71,7 +71,7 @@ describe('POST /peer/transactions', function () {
 
 		before(function (done) {
 			node.async.doUntil(function (next) {
-				var transaction = node.lisk.transaction.createTransaction(
+				var transaction = node.shift.transaction.createTransaction(
 					node.randomAccount().address,
 					node.randomNumber(100000000, 1000000000),
 					node.gAccount.password
@@ -92,7 +92,7 @@ describe('POST /peer/transactions', function () {
 		});
 
 		it('should confirm all transactions', function (done) {
-			var blocksToWait = maximum / node.constants.maxTxsPerBlock + 1;
+			var blocksToWait = Math.ceil(maximum / node.constants.maxTxsPerBlock);
 			node.waitForBlocks(blocksToWait, function (err) {
 				node.async.eachSeries(transactions, function (transaction, eachSeriesCb) {
 					node.get('/api/transactions/get?id=' + transaction.id, function (err, res) {
