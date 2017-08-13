@@ -44,6 +44,9 @@ function Peers (cb, scope) {
 		config: {
 			peers: scope.config.peers,
 			version: scope.config.version,
+			forging: {
+				force: scope.config.forging.force,
+			},
 		},
 	};
 	self = this;
@@ -541,7 +544,7 @@ Peers.prototype.onPeersReady = function () {
 			discoverPeers: function (seriesCb) {
 				library.logger.trace('Discovering new peers...');
 				self.discover(function (err) {
-					if (err) {
+					if (err && !library.config.forging.force) {
 						library.logger.error('Discovering new peers failed', err);
 					}
 					return setImmediate(seriesCb);
