@@ -1,6 +1,6 @@
 {
   "name": "shift",
-  "version": "6.5.2",
+  "version": "6.6.1",
   "private": true,
   "scripts": {
     "start": "node app.js",
