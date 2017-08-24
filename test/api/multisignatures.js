@@ -1,4 +1,4 @@
-'use strict'; /*jslint mocha:true, expr:true */
+'use strict';
 
 var async = require('async');
 var node = require('./../node.js');
@@ -61,7 +61,9 @@ function confirmTransaction (transactionId, passphrases, done) {
 				secret: passphrase,
 				transactionId: transactionId
 			}, function (err, res) {
-				node.expect(res.body).to.have.property('success').to.be.ok;
+				if (err || !res.body.success) {
+					return untilCb(err || res.body.error);
+				}
 				node.expect(res.body).to.have.property('transactionId').to.equal(transactionId);
 				count++;
 				return untilCb();
@@ -160,10 +162,10 @@ describe('PUT /api/multisignatures', function () {
 		delete validParams.keysgroup;
 
 		node.put('/api/multisignatures', validParams, function (err, res) {
-				node.expect(res.body).to.have.property('success').to.be.not.ok;
-				node.expect(res.body).to.have.property('error');
-				done();
-			});
+			node.expect(res.body).to.have.property('success').to.be.not.ok;
+			node.expect(res.body).to.have.property('error');
+			done();
+		});
 	});
 
 	it('using string keysgroup should fail', function (done) {
@@ -307,6 +309,38 @@ describe('PUT /api/multisignatures', function () {
 			done();
 		});
 	});
+
+	it('using null member in keysgroup should fail', function (done) {
+		var multiSigTx = {
+			secret: multisigAccount.password,
+			lifetime: parseInt(node.randomNumber(1,72)),
+			min: requiredSignatures,
+			keysgroup: makeKeysGroup()
+		};
+		multiSigTx.keysgroup.push(null);
+
+		node.put('/api/multisignatures', multiSigTx, function (err, res) {
+			node.expect(res.body).to.have.property('success').to.be.not.ok;
+			node.expect(res.body).to.have.property('error').to.equal('Invalid member in keysgroup');
+			done();
+		});
+	});
+
+	it('using invalid member in keysgroup should fail', function (done) {
+		var multiSigTx = {
+			secret: multisigAccount.password,
+			lifetime: parseInt(node.randomNumber(1,72)),
+			min: requiredSignatures,
+			keysgroup: makeKeysGroup()
+		};
+		multiSigTx.keysgroup.push('+' + node.eAccount.publicKey + 'A');
+
+		node.put('/api/multisignatures', multiSigTx, function (err, res) {
+			node.expect(res.body).to.have.property('success').to.be.not.ok;
+			node.expect(res.body).to.have.property('error').to.equal('Invalid public key in multisignature keysgroup');
+			done();
+		});
+	});
 });
 
 describe('GET /api/multisignatures/pending', function () {
@@ -355,14 +389,12 @@ describe('GET /api/multisignatures/pending', function () {
 				node.expect(pending.transaction).to.have.property('type').that.is.equal(node.txTypes.MULTI);
 				node.expect(pending.transaction).to.have.property('amount').that.is.equal(0);
 				node.expect(pending.transaction).to.have.property('senderPublicKey').that.is.equal(multisigAccount.publicKey);
-				node.expect(pending.transaction).to.have.property('requesterPublicKey').that.is.null;
 				node.expect(pending.transaction).to.have.property('timestamp').that.is.a('number');
 				node.expect(pending.transaction).to.have.property('asset').that.is.an('object');
 				node.expect(pending.transaction.asset).to.have.property('multisignature').that.is.an('object');
 				node.expect(pending.transaction.asset.multisignature).to.have.property('min').that.is.a('number');
 				node.expect(pending.transaction.asset.multisignature).to.have.property('keysgroup').that.is.an('array');
 				node.expect(pending.transaction.asset.multisignature).to.have.property('lifetime').that.is.a('number');
-				node.expect(pending.transaction).to.have.property('recipientId').that.is.null;
 				node.expect(pending.transaction).to.have.property('signature').that.is.a('string');
 				node.expect(pending.transaction).to.have.property('id').that.is.equal(multiSigTx.txId);
 				node.expect(pending.transaction).to.have.property('fee').that.is.equal(node.fees.multisignatureRegistrationFee * (Keys.length + 1));
@@ -544,6 +576,48 @@ describe('POST /api/multisignatures/sign (transaction)', function () {
 					done();
 				});
 			});
+		});
+	});
+});
+
+describe('POST /api/multisignatures/sign (regular account)', function () {
+
+	var transactionId;
+
+	before(function (done) {
+		node.put('/api/transactions/', {
+			secret: node.gAccount.password ,
+			amount: 1,
+			recipientId: accounts[0].address
+		}, function (err, res) {
+			node.expect(res.body).to.have.property('success').to.be.ok;
+			node.expect(res.body).to.have.property('transactionId').that.is.not.empty;
+			transactionId = res.body.transactionId;
+			done();
+		});
+	});
+
+	it('should be impossible to sign the transaction', function (done) {
+		node.onNewBlock(function (err) {
+			node.get('/api/transactions/get?id=' + transactionId, function (err, res) {
+				node.expect(res.body).to.have.property('success').to.be.ok;
+				node.expect(res.body).to.have.property('transaction');
+				node.expect(res.body.transaction).to.have.property('id').to.equal(transactionId);
+				confirmTransaction(transactionId, [multisigAccount.password], function (err, res) {
+					node.expect(err).not.to.be.empty;
+					done();
+				});
+			});
+		});
+	});
+
+	it('should have no pending multisignatures', function (done) {
+		node.get('/api/multisignatures/pending?publicKey=' + accounts[0].publicKey, function (err, res) {
+			node.expect(res.body).to.have.property('success');
+			node.expect(res.body).to.have.property('success').to.be.ok;
+			node.expect(res.body).to.have.property('transactions').that.is.an('array');
+			node.expect(res.body.transactions.length).to.equal(0);
+			done();
 		});
 	});
 });

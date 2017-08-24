@@ -64,6 +64,16 @@ module.exports = {
 		},
 		required: ['address']
 	},
+	getDelegatesFee: {
+		id: 'accounts.getDelegatesFee',
+		type: 'object',
+		properties: {
+			height: {
+				type: 'integer',
+				minimum: 1
+			}
+		}
+	},
 	addDelegates: {
 		id: 'accounts.addDelegates',
 		type: 'object',
@@ -93,9 +103,12 @@ module.exports = {
 				format: 'address',
 				minLength: 1,
 				maxLength: 22
+			},
+			publicKey: {
+				type: 'string',
+				format: 'publicKey'
 			}
-		},
-		required: ['address']
+		}
 	},
 	top: {
 		id: 'accounts.top',

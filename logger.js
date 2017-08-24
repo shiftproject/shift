@@ -3,6 +3,7 @@
 var strftime = require('strftime').utc();
 var fs = require('fs');
 var util = require('util');
+var circularJSON = require('circular-json');
 require('colors');
 
 module.exports = function (config) {
@@ -10,6 +11,7 @@ module.exports = function (config) {
 	var exports = {};
 
 	config.levels = config.levels || {
+		none: 99,
 		trace: 0,
 		debug: 1,
 		log: 2,
@@ -34,7 +36,7 @@ module.exports = function (config) {
 	config.errorLevel = config.errorLevel || 'log';
 
 	if (!config.append && fs.existsSync(config.filename))	{
-		fs.renameSync(config.filename, config.filename+".bak");
+		fs.renameSync(config.filename, config.filename+'.bak');
 	}
 	var log_file = fs.createWriteStream(config.filename, config.append ? {flags: 'a'} : {});
 
@@ -43,29 +45,29 @@ module.exports = function (config) {
 	};
 
 	// remove secret in the message, e.g. url parameter (string) or data object properties
-	function snipsecret(data) {
+	function snipsecret (data) {
 		var rv = data;
 		if (typeof data === 'string') {			// remove secret in the string messages, e.g. url parameter
-			var pos = rv.search("secret=");
+			var pos = rv.search('secret=');
 			if (pos<0)
-				return rv;
+				{return rv;}
 			pos += 7;
-			var posE = rv.indexOf("&", pos);
+			var posE = rv.indexOf('&', pos);
 			if (posE<0)
-				posE=rv.length();
+				{posE=rv.length();}
 			var toReplace = rv.substr(pos, posE-pos);
 			rv = rv.replace(toReplace, 'XXXXXXXXXX');
 		} 
 		
 		else if (typeof data === 'object') {			// remove secret in object properties
-			rv = JSON.parse(JSON.stringify(data));	// create a real object copy
+			rv = JSON.parse(circularJSON.stringify(data));	// create a real object copy, filter circular references
 			for (var key in rv) {
 				if (key.search(/secret/i) > -1) {
 					rv[key] = 'XXXXXXXXXX';
 				}
 			}
 		}
-	return rv;	
+		return rv;	
 	}
 
 	Object.keys(config.levels).forEach(function (name) {
@@ -84,7 +86,7 @@ module.exports = function (config) {
 			log.message = snipsecret(log.message);				// remove secret in the message, e.g. url parameter
 
 			if (data && util.isObject(data)) {
-				log.data = JSON.stringify(snipsecret(data));	// remove secret in the data
+				log.data = circularJSON.stringify(snipsecret(data));	// remove secret in the data, filter circular references
 			} else {
 				log.data = data;
 			}

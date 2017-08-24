@@ -7,7 +7,7 @@ jsonSql.setDialect('postgresql');
 var sandboxHelper = require('../helpers/sandbox.js');
 
 // Private fields
-var modules, library, self, __private = {}, shared = {};
+var library, self, __private = {}, shared = {};
 
 __private.loaded = false;
 __private.SINGLE_QUOTES = /'/g;
@@ -15,43 +15,72 @@ __private.SINGLE_QUOTES_DOUBLED = '\'\'';
 __private.DOUBLE_QUOTES = /"/g;
 __private.DOUBLE_QUOTES_DOUBLED = '""';
 
+/**
+ * Initializes library with scope content.
+ * @class
+ * @classdesc Main Sql methods.
+ * @param {setImmediateCallback} cb - Callback function.
+ * @param {scope} scope - App instance.
+ */
 // Constructor
 function Sql (cb, scope) {
-	library = scope;
+	library = {
+		logger: scope.logger,
+		db: scope.db,
+	};
 	self = this;
 
 	setImmediate(cb, null, self);
 }
 
+// Private methods
+/**
+ * Adds scape values based on input type.
+ * @private
+ * @param {*} what
+ * @return {string} 
+ * @throws {string} Unsupported data (with type)
+ */
 __private.escape = function (what) {
 	switch (typeof what) {
-		case 'string':
-			return '\'' + what.replace(
+	case 'string':
+		return '\'' + what.replace(
 				__private.SINGLE_QUOTES, __private.SINGLE_QUOTES_DOUBLED
 			) + '\'';
-		case 'object':
-			if (what == null) {
-				return 'null';
-			} else if (Buffer.isBuffer(what)) {
-				return 'X\'' + what.toString('hex') + '\'';
-			} else {
-				return ('\'' + JSON.stringify(what).replace(
+	case 'object':
+		if (what == null) {
+			return 'null';
+		} else if (Buffer.isBuffer(what)) {
+			return 'X\'' + what.toString('hex') + '\'';
+		} else {
+			return ('\'' + JSON.stringify(what).replace(
 					__private.SINGLE_QUOTES, __private.SINGLE_QUOTES_DOUBLED
 				) + '\'');
-			}
-			break;
-		case 'boolean':
-			return what ? '1' : '0'; // 1 => true, 0 => false
-		case 'number':
-			if (isFinite(what)) { return '' + what; }
+		}
+		break;
+	case 'boolean':
+		return what ? '1' : '0'; // 1 => true, 0 => false
+	case 'number':
+		if (isFinite(what)) { return '' + what; }
 	}
 	throw 'Unsupported data ' + typeof what;
 };
 
+/**
+ * Adds double quotes to input string.
+ * @private
+ * @param {string} str
+ * @return {string} 
+ */
 __private.escape2 = function (str) {
-		return '"' + str.replace(__private.DOUBLE_QUOTES, __private.DOUBLE_QUOTES_DOUBLED) + '"';
+	return '"' + str.replace(__private.DOUBLE_QUOTES, __private.DOUBLE_QUOTES_DOUBLED) + '"';
 };
 
+/**
+ * @private
+ * @param {Object} obj
+ * @param {string} dappid
+ */
 __private.pass = function (obj, dappid) {
 	for (var property in obj) {
 		if (typeof obj[property] === 'object') {
@@ -84,7 +113,16 @@ __private.pass = function (obj, dappid) {
 	}
 };
 
-// Private methods
+/**
+ * Creates sql query to dapps
+ * @implements {jsonSql.build}
+ * @implements {library.db.query}
+ * @implements {async.until}
+ * @param {string} action
+ * @param {Object} config
+ * @param {function} cb
+ * @return {setImmediateCallback} cb, err, data
+ */
 __private.query = function (action, config, cb) {
 	var sql = null;
 
@@ -105,7 +143,7 @@ __private.query = function (action, config, cb) {
 
 		try {
 			sql = jsonSql.build(extend({}, config, defaultConfig));
-			library.logger.trace("sql.query: ", sql);
+			library.logger.trace('sql.query:', sql);
 		} catch (e) {
 			return done(e);
 		}
@@ -125,31 +163,41 @@ __private.query = function (action, config, cb) {
 				batchPack = config.values.splice(0, 10);
 				return batchPack.length === 0;
 			}, function (cb) {
-				var fields = Object.keys(config.fields).map(function (field) {
-					return __private.escape2(config.fields[field]);		// add double quotes to field identifiers
-				});
-				sql = 'INSERT INTO ' + 'dapp_' + config.dappid + '_' + config.table + ' (' + fields.join(',') + ') ';
-				var rows = [];
-				batchPack.forEach(function (value, rowIndex) {
-					var currentRow = batchPack[rowIndex];
-					var fields = [];
-					for (var i = 0; i < currentRow.length; i++) {
-						fields.push(__private.escape(currentRow[i]));
-					}
-					rows.push('SELECT ' + fields.join(','));
-				});
-				sql = sql + ' ' + rows.join(' UNION ');
-				library.db.none(sql).then(function () {
-					return setImmediate(cb);
-				}).catch(function (err) {
-					library.logger.error(err.stack);
-					return setImmediate(cb, 'Sql#query error');
-				});
-			}, done);
+			var fields = Object.keys(config.fields).map(function (field) {
+				return __private.escape2(config.fields[field]);	// Add double quotes to field identifiers
+			});
+			sql = 'INSERT INTO ' + 'dapp_' + config.dappid + '_' + config.table + ' (' + fields.join(',') + ') ';
+			var rows = [];
+			batchPack.forEach(function (value, rowIndex) {
+				var currentRow = batchPack[rowIndex];
+				var fields = [];
+				for (var i = 0; i < currentRow.length; i++) {
+					fields.push(__private.escape(currentRow[i]));
+				}
+				rows.push('SELECT ' + fields.join(','));
+			});
+			sql = sql + ' ' + rows.join(' UNION ');
+			library.db.none(sql).then(function () {
+				return setImmediate(cb);
+			}).catch(function (err) {
+				library.logger.error(err.stack);
+				return setImmediate(cb, 'Sql#query error');
+			});
+		}, done);
 	}
 };
 
 // Public methods
+/**
+ * Creates sql sentences to dapp_ tables based on config param and runs them.
+ * @implements {jsonSql.build}
+ * @implements {async.eachSeries}
+ * @implements {library.db.none}
+ * @param {string} dappid
+ * @param {Object} config
+ * @param {function} cb
+ * @return {setImmediateCallback} err message | cb
+ */
 Sql.prototype.createTables = function (dappid, config, cb) {
 	if (!config) {
 		return setImmediate(cb, 'Invalid table format');
@@ -190,6 +238,15 @@ Sql.prototype.createTables = function (dappid, config, cb) {
 	});
 };
 
+/**
+ * Drops tables based on config param.
+ * @implements {async.eachSeries}
+ * @implements {library.db.none}
+ * @param {string} dappid
+ * @param {Object} config
+ * @param {function} cb
+ * @return {setImmediateCallback} err message | cb
+ */
 Sql.prototype.dropTables = function (dappid, config, cb) {
 	var tables = [];
 	for (var i = 0; i < config.length; i++) {
@@ -217,40 +274,78 @@ Sql.prototype.dropTables = function (dappid, config, cb) {
 	}, cb);
 };
 
+/**
+ * Calls helpers.sandbox.callMethod().
+ * @implements module:helpers#callMethod
+ * @param {function} call - Method to call.
+ * @param {*} args - List of arguments.
+ * @param {function} cb - Callback function.
+ */
 Sql.prototype.sandboxApi = function (call, args, cb) {
 	sandboxHelper.callMethod(shared, call, args, cb);
 };
 
 // Events
+/**
+ * Modules are not required in this file.
+ * @param {modules} scope - Loaded modules.
+ */
 Sql.prototype.onBind = function (scope) {
-	modules = scope;
 };
 
+/**
+ * Sets to true private variable loaded.
+ */
 Sql.prototype.onBlockchainReady = function () {
 	__private.loaded = true;
 };
 
-// Shared
+// Shared API
+/**
+ * @implements {__private.query.call}
+ * @param {Object} req
+ * @param {function} cb
+ */
 shared.select = function (req, cb) {
 	var config = extend({}, req.body, {dappid: req.dappid});
 	__private.query.call(this, 'select', config, cb);
 };
 
+/**
+ * @implements {__private.query.call}
+ * @param {Object} req
+ * @param {function} cb
+ */
 shared.batch = function (req, cb) {
 	var config = extend({}, req.body, {dappid: req.dappid});
 	__private.query.call(this, 'batch', config, cb);
 };
 
+/**
+ * @implements {__private.query.call}
+ * @param {Object} req
+ * @param {function} cb
+ */
 shared.insert = function (req, cb) {
 	var config = extend({}, req.body, {dappid: req.dappid});
 	__private.query.call(this, 'insert', config, cb);
 };
 
+/**
+ * @implements {__private.query.call}
+ * @param {Object} req
+ * @param {function} cb
+ */
 shared.update = function (req, cb) {
 	var config = extend({}, req.body, {dappid: req.dappid});
 	__private.query.call(this, 'update', config, cb);
 };
 
+/**
+ * @implements {__private.query.call}
+ * @param {Object} req
+ * @param {function} cb
+ */
 shared.remove = function (req, cb) {
 	var config = extend({}, req.body, {dappid: req.dappid});
 	__private.query.call(this, 'remove', config, cb);

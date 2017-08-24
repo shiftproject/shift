@@ -1,13 +1,13 @@
 {
     "port": 9305,
     "address": "0.0.0.0",
-    "version": "6.1.0",
     "fileLogLevel": "info",
     "logFileName": "logs/shift.log",
     "logAppend": false,
     "consoleLogLevel": "log",
     "trustProxy": false,
     "topAccounts": false,
+    "cacheEnabled": false,
     "db": {
         "host": "localhost",
         "port": 5432,
@@ -21,11 +21,17 @@
             "error"
         ]
     },
+    "redis": {
+        "host": "127.0.0.1",
+        "port": 6380,
+        "db": 0,
+        "password": null
+    },
     "api": {
+        "enabled": true,
         "access": {
-            "whiteList": [
-                "127.0.0.1"
-            ]
+            "public": false,
+            "whiteList": ["127.0.0.1"]
         },
         "options": {
             "limits": {
@@ -37,6 +43,7 @@
         }
     },
     "peers": {
+        "enabled": true,
         "list": [
             {
                 "ip": "193.70.110.88",
@@ -156,7 +163,9 @@
                 "port": 9305
             }
         ],
-        "blackList": [],
+        "access": {
+            "blackList": []
+        },
         "options": {
             "limits": {
                 "max": 0,
@@ -173,6 +182,9 @@
         "parallelLimit": 20,
         "releaseLimit": 25,
         "relayLimit": 2
+    },
+    "transactions": {
+        "maxTxsPerQueue": 1000
     },
     "forging": {
         "force": false,

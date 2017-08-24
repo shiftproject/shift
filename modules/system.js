@@ -13,65 +13,148 @@ var modules, library, self, __private = {}, shared = {};
 
 var rcRegExp = /[a-z]+$/;
 
+/**
+ * Initializes library with scope content and private variables:
+ * - os
+ * - version
+ * - port
+ * - height
+ * - nethash
+ * - broadhash
+ * - minVersion
+ * - nonce
+ * @class
+ * @classdesc Main System methods.
+ * @implements {os}
+ * @param {setImmediateCallback} cb - Callback function.
+ * @param {scope} scope - App instance.
+ */
 // Constructor
 function System (cb, scope) {
-	library = scope;
+	library = {
+		logger: scope.logger,
+		db: scope.db,
+		nonce: scope.nonce,
+		config: {
+			port: scope.config.port,
+			nethash: scope.config.nethash,
+		},
+	};
 	self = this;
 
 	__private.os = os.platform() + os.release();
 	__private.version = constants.currentVersion;
-	__private.minVersion = constants.minVersion;
 	__private.port = library.config.port;
 	__private.height = 1;
 	__private.nethash = library.config.nethash;
 	__private.broadhash = library.config.nethash;
-
-	if (rcRegExp.test(__private.minVersion)) {
-		this.minVersion = __private.minVersion.replace(rcRegExp, '');
-		this.minVersionChar = __private.minVersion.charAt(__private.minVersion.length - 1);
-	} else {
-		this.minVersion = __private.minVersion;
-	}
+	__private.nonce = library.nonce;
 
 	setImmediate(cb, null, self);
 }
 
-// Private methods
-
 // Public methods
+/**
+ * Returns private variables object content.
+ * @return {Object}
+ */
 System.prototype.headers = function () {
 	return __private;
 };
 
+/**
+ * Gets private variable `os`
+ * @return {string}
+ */
 System.prototype.getOS = function () {
 	return __private.os;
 };
 
+/**
+ * Gets private variable `version`
+ * @return {string}
+ */
 System.prototype.getVersion = function () {
 	return __private.version;
 };
 
+/**
+ * Gets private variable `port`
+ * @return {number}
+ */
 System.prototype.getPort = function () {
 	return __private.port;
 };
 
+/**
+ * Gets private variable `height`
+ * @return {number}
+ */
 System.prototype.getHeight = function () {
 	return __private.height;
 };
 
+/**
+ * Gets private variable `nethash`
+ * @return {hash}
+ */
 System.prototype.getNethash = function () {
 	return __private.nethash;
 };
 
+/**
+ * Gets private variable `nonce`
+ * @return {nonce}
+ */
+System.prototype.getNonce = function () {
+	return __private.nonce;
+};
+/**
+ * Gets private variable `nethash` and compares with input param.
+ * @param {hash}
+ * @return {boolean} True if input param is equal to private value.
+ */
 System.prototype.networkCompatible = function (nethash) {
 	return __private.nethash === nethash;
 };
 
-System.prototype.getMinVersion = function () {
-	return __private.minVersion;
+/**
+ * Gets private variable `minVersion`
+ * @return {string}
+ */
+System.prototype.getMinVersion = function (height) {
+	height = height || modules.blocks.lastBlock.get().height;
+
+	var minVer = '';
+	for ( var i = constants.minVersion.length - 1; i >= 0 && minVer == ''; --i ) {
+		if (height>=constants.minVersion[i].height)
+			{minVer = constants.minVersion[i].ver;}
+	}
+
+	// update this.minVersion / this.minVersionChar, if necessary
+	if (minVer != this.lastMinVer) {
+		this.lastMinVer = minVer;
+		if (rcRegExp.test(minVer)) {
+			this.minVersion = minVer.replace(rcRegExp, '');
+			this.minVersionChar = minVer.charAt(minVer.length - 1);
+		} else {
+			this.minVersion = minVer;
+			this.minVersionChar = '';
+		}
+	}
+
+	return minVer;
 };
 
+/**
+ * Checks version compatibility from input param against private values.
+ * @implements {semver}
+ * @param {string} version
+ * @return {boolean}
+ */
 System.prototype.versionCompatible = function (version) {
+	this.getMinVersion();		// set current minVersion
+
 	var versionChar;
 
 	if (rcRegExp.test(version)) {
@@ -89,6 +172,13 @@ System.prototype.versionCompatible = function (version) {
 	return semver.satisfies(version, this.minVersion);
 };
 
+/**
+ * Gets private nethash or creates a new one, based on input param and data.
+ * @implements {library.db.query}
+ * @implements {crypto.createHash}
+ * @param {*} cb
+ * @return {hash|setImmediateCallback} err | private nethash or new hash.
+ */
 System.prototype.getBroadhash = function (cb) {
 	if (typeof cb !== 'function') {
 		return __private.broadhash;
@@ -109,6 +199,33 @@ System.prototype.getBroadhash = function (cb) {
 	});
 };
 
+System.prototype.getFees = function (height) {
+	height = height || modules.blocks.lastBlock.get().height+1;
+
+	var i;
+	for (i=constants.fees.length-1; i>0; i--)	{
+		if (height>=constants.fees[i].height) {
+			break;
+		}
+	}
+
+	return {
+		fromHeight: constants.fees[i].height,
+		toHeight: i == constants.fees.length-1 ? null : constants.fees[i+1].height-1,
+		height: height,
+		fees: constants.fees[i].fees
+	};
+};
+
+/**
+ * Updates private broadhash and height values.
+ * @implements {async.series}
+ * @implements {System.getBroadhash}
+ * @implements {modules.blocks.lastBlock.get}
+ * @implements {modules.transport.headers}
+ * @param {function} cb Callback function
+ * @return {setImmediateCallback} cb, err
+ */
 System.prototype.update = function (cb) {
 	async.series({
 		getBroadhash: function (seriesCb) {
@@ -121,7 +238,7 @@ System.prototype.update = function (cb) {
 			});
 		},
 		getHeight: function (seriesCb) {
-			__private.height = modules.blocks.getLastBlock().height;
+			__private.height = modules.blocks.lastBlock.get().height;
 			return setImmediate(seriesCb);
 		}
 	}, function (err) {
@@ -131,16 +248,28 @@ System.prototype.update = function (cb) {
 	});
 };
 
+/**
+ * Calls helpers.sandbox.callMethod().
+ * @implements module:helpers#callMethod
+ * @param {function} call - Method to call.
+ * @param {*} args - List of arguments.
+ * @param {function} cb - Callback function.
+ */
 System.prototype.sandboxApi = function (call, args, cb) {
 	sandboxHelper.callMethod(shared, call, args, cb);
 };
 
 // Events
+/**
+ * Assigns used modules to modules variable.
+ * @param {modules} scope - Loaded modules.
+ */
 System.prototype.onBind = function (scope) {
-	modules = scope;
+	modules = {
+		blocks: scope.blocks,
+		transport: scope.transport,
+	};
 };
-
-// Shared
 
 // Export
 module.exports = System;

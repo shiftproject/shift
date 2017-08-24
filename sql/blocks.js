@@ -18,9 +18,31 @@ var BlocksSql = {
   deleteBlock: 'DELETE FROM blocks WHERE "id" = ${id};',
 
   countList: function (params) {
+    if (params.where.length) {
+      return 'SELECT COUNT("b_id")::int FROM blocks_list WHERE ' + params.where.join(' AND ');
+    } else {
+      return 'SELECT COALESCE((SELECT height FROM blocks ORDER BY height DESC LIMIT 1), 0)';
+    }
+  },
+
+  aggregateBlocksReward: function (params) {
     return [
-      'SELECT COUNT("b_id")::int FROM blocks_list',
-      (params.where.length ? 'WHERE ' + params.where.join(' AND ') : '')
+      'WITH',
+      'delegate AS (SELECT',
+        '1 FROM mem_accounts m WHERE m."isDelegate" = 1 AND m."publicKey" = DECODE(${generatorPublicKey}, \'hex\') LIMIT 1),',
+      'rewards AS (SELECT COUNT(1) AS count, SUM(reward) AS rewards FROM blocks WHERE "generatorPublicKey" = DECODE(${generatorPublicKey}, \'hex\')',
+          (params.start !== undefined ? ' AND timestamp >= ${start}' : ''),
+          (params.end !== undefined ? ' AND timestamp <= ${end}' : ''),
+      '),',
+      'fees AS (SELECT SUM(fees) AS fees FROM rounds_fees WHERE "publicKey" = DECODE(${generatorPublicKey}, \'hex\')',
+          (params.start !== undefined ? ' AND timestamp >= ${start}' : ''),
+          (params.end !== undefined ? ' AND timestamp <= ${end}' : ''),
+      ')',
+      'SELECT',
+        '(SELECT * FROM delegate) AS delegate,',
+        '(SELECT count FROM rewards) AS count,',
+        '(SELECT fees FROM fees) AS fees,',
+        '(SELECT rewards FROM rewards) AS rewards'
     ].filter(Boolean).join(' ');
   },
 
@@ -35,7 +57,17 @@ var BlocksSql = {
 
   getById: 'SELECT * FROM blocks_list WHERE "b_id" = ${id}',
 
-  getIdSequence: 'SELECT (ARRAY_AGG("id" ORDER BY "height" ASC))[1] AS "id", MIN("height") AS "height", CAST("height" / ${delegates} AS INTEGER) + (CASE WHEN "height" % ${activeDelegates} > 0 THEN 1 ELSE 0 END) AS "round" FROM blocks WHERE "height" <= ${height} GROUP BY "round" ORDER BY "height" DESC LIMIT ${limit}',
+  getIdSequence: function () {
+    return [
+      'WITH',
+      'current_round AS (SELECT CEIL(b.height / ${delegates}::float)::bigint FROM blocks b WHERE b.height <= ${height} ORDER BY b.height DESC LIMIT 1),',
+      'rounds AS (SELECT * FROM generate_series((SELECT * FROM current_round), (SELECT * FROM current_round) - ${limit} + 1, -1))',
+      'SELECT',
+        'b.id, b.height, CEIL(b.height / ${delegates}::float)::bigint AS round',
+        'FROM blocks b',
+        'WHERE b.height IN (SELECT ((n - 1) * ${delegates}) + 1 FROM rounds AS s(n)) ORDER BY height DESC'
+    ].filter(Boolean).join(' ');
+  },
 
   getCommonBlock: function (params) {
     return [

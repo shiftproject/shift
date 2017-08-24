@@ -1,25 +1,84 @@
 'use strict';
 
+/**
+ * @namespace constants
+ * @memberof module:helpers
+ * @property {number} activeDelegates - The default number of delegates.
+ * @property {number} addressLength - The default address length.
+ * @property {number} blockHeaderLength - The default block header length.
+ * @property {number} blockReceiptTimeOut
+ * @property {number} confirmationLength
+ * @property {Date} epochTime
+ * @property {object} fees - The default values for fees.
+ * @property {number} fees.send
+ * @property {number} fees.vote
+ * @property {number} fees.secondsignature
+ * @property {number} fees.delegate
+ * @property {number} fees.multisignature
+ * @property {number} fees.dapp
+ * @property {number} feeStart
+ * @property {number} feeStartVolume
+ * @property {number} fixedPoint
+ * @property {number} maxAddressesLength
+ * @property {number} maxAmount
+ * @property {number} maxConfirmations
+ * @property {number} maxPayloadLength
+ * @property {number} maxPeers
+ * @property {number} maxRequests
+ * @property {number} maxSharedTxs
+ * @property {number} maxSignaturesLength
+ * @property {number} maxTxsPerBlock
+ * @property {number} minBroadhashConsensus
+ * @property {string[]} nethashes - Mainnet and Testnet.
+ * @property {number} numberLength
+ * @property {number} requestLength
+ * @property {object} rewards
+ * @property {number[]} rewards.milestones - Initial 5, and decreasing until 1.
+ * @property {number} rewards.offset - Start rewards at block (n).
+ * @property {number} rewards.distance - Distance between each milestone
+ * @property {number} signatureLength
+ * @property {number} totalAmount
+ * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
+ */
 module.exports = {
-	currentVersion: "6.1.0",
-	minVersion: "^6.1.0",
+	currentVersion: '6.6.3',
+	minVersion: [
+		{ height: 1,      ver: '^6.1.0'},
+		{ height: 600000, ver: '^6.3.0'},
+		{ height: 828000, ver: '^6.5.1'},
+		{ height: 1015000, ver: '^6.6.2'}
+	],
 	activeDelegates: 101,
 	addressLength: 208,
 	blockHeaderLength: 248,
 	blockTime: 27000,
-	blockReceiptTimeOut: 27*12, // 12 blocks
+	blockReceiptTimeOut: 27*2, // 2 blocks
 	confirmationLength: 77,
 	epochTime: new Date(Date.UTC(2016, 4, 24, 17, 0, 0, 0)),
-	fees: {
-		send: 10000000,
-		vote: 100000000,
-		secondsignature: 500000000,
-		delegate: 6000000000,
-		multisignature: 500000000,
-		dapp: 2500000000
-	},
-	feeStart: 1,
-	feeStartVolume: 10000 * 100000000,
+	fees: [
+		{
+			height: 1,
+			fees: {
+				send: 10000000,		// 0.1
+				vote: 100000000,	// 1
+				secondsignature: 500000000,	// 5
+				delegate: 6000000000,	// 60
+				multisignature: 500000000, // 5
+				dapp: 2500000000	//25
+			}
+		},
+		{
+			height: 828000,
+			fees: {
+				send: 1000000,		// 0.01
+				vote: 100000000,	// 1
+				secondsignature: 10000000,	// 0.1
+				delegate: 6000000000,	// 60
+				multisignature: 50000000, // 0.5
+				dapp: 2500000000	//25
+			}
+		}
+	],
 	fixedPoint: Math.pow(10, 8),
 	maxAddressesLength: 208 * 128,
 	maxAmount: 100000000,
@@ -30,7 +89,6 @@ module.exports = {
 	maxSharedTxs: 100,
 	maxSignaturesLength: 196 * 256,
 	maxTxsPerBlock: 25,
-	maxTxsPerQueue: 5000,
 	minBroadhashConsensus: 51,
 	nethashes: [
 		// Mainnet
@@ -40,17 +98,18 @@ module.exports = {
 	],
 	numberLength: 100000000,
 	requestLength: 104,
-	rewards: {
-		milestones: [
-            100000000,  // Initial reward
-            70000000,  // Milestone 1
-            50000000,  // Milestone 2
-            30000000,  // Milestone 3
-            20000000   // Milestone 4
-		],
-		offset: 10,   // Start rewards at block (n)
-		distance: 3000000, // Distance between each milestone
-	},
+	rewards: [
+		{ height: 1,        reward: 0},
+		{ height: 10,       reward: 100000000},
+		{ height: 11,       reward: 30000000},
+		{ height: 12,       reward: 20000000},
+		{ height: 13,       reward: 100000000},
+		{ height: 828000,   reward: 110000000},
+		{ height: 1996000,  reward: 90000000},
+		{ height: 3164000,  reward: 70000000},
+		{ height: 4332000,  reward: 50000000},
+		{ height: 5500000,  reward: 30000000},
+	],
 	signatureLength: 196,
 	totalAmount: 1009000000000000,
 	unconfirmedTransactionTimeOut: 10800 // 1080 blocks

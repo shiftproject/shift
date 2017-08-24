@@ -1,4 +1,4 @@
-'use strict'; /*jslint mocha:true */
+'use strict';
 
 var chai = require('chai');
 var expect = require('chai').expect;
@@ -435,7 +435,7 @@ describe('BlockReward', function () {
 					var supply = blockReward.calcSupply(13451519);
 					var prev = supply;
 
-					for (var i = 13451520; i < (13451520 * 2); i++) {
+					for (var i = 13451520; i < (13451520 + 100); i++) {
 						supply = blockReward.calcSupply(i);
 						expect(supply).to.equal(prev + constants.rewards.milestones[4]);
 						prev = supply;

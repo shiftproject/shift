@@ -1,6 +1,8 @@
-'use strict'; /*jslint mocha:true, expr:true */
+'use strict';
 
 var node = require('./../node.js');
+var clearDatabaseTable = require('../common/globalBefore').clearDatabaseTable;
+var modulesLoader = require('../common/initModule').modulesLoader;
 
 var dapp = {};
 var account = node.randomTxAccount();
@@ -27,6 +29,18 @@ function putTransaction (params, done) {
 		});
 	});
 }
+
+before(function (done) {
+	modulesLoader.getDbConnection(function (err, db) {
+		if (err) {
+			return done(err);
+		}
+
+		node.async.every(['dapps', 'outtransfer', 'intransfer'], function (table, cb) {
+			clearDatabaseTable(db, modulesLoader.logger, table, cb);
+		}, done);
+	});
+});
 
 before(function (done) {
 	// Send to SHIFT to account 1 address
@@ -342,7 +356,7 @@ describe('PUT /api/dapps/transaction', function () {
 
 	it('using amount > balance should fail', function (done) {
 		openAccount(account, function (err, res) {
-			validParams.amount = node.bignum(account.balance).plus('1').toNumber();
+			validParams.amount = new node.bignum(account.balance).plus('1').toNumber();
 
 			putTransaction(validParams, function (err, res) {
 				node.expect(res.body).to.have.property('success').to.not.be.ok;
@@ -534,7 +548,7 @@ describe('PUT /api/dapps/withdrawal', function () {
 
 	it('using amount > balance should fail', function (done) {
 		openAccount(account, function (err, res) {
-			validParams.amount = node.bignum(account.balance).plus('1').toNumber();
+			validParams.amount = new node.bignum(account.balance).plus('1').toNumber();
 
 			putWithdrawal(validParams, function (err, res) {
 				node.expect(res.body).to.have.property('success').to.not.be.ok;
@@ -757,13 +771,11 @@ describe('PUT /api/dapps/withdrawal', function () {
 			node.expect(res.body).to.have.property('success').to.be.ok;
 			node.expect(res.body).to.have.property('transactionId').to.not.be.empty;
 
-			setTimeout(function () {
-				putWithdrawal(validParams, function (err, res) {
-					node.expect(res.body).to.have.property('success').to.be.not.ok;
-					node.expect(res.body).to.have.property('error').to.equal('Transaction is already processed: ' + validParams.transactionId);
-					done();
-				});
-			}, 2000);
+			putWithdrawal(validParams, function (err, res) {
+				node.expect(res.body).to.have.property('success').to.be.not.ok;
+				node.expect(res.body).to.have.property('error').to.contain('Transaction is already processed');
+				done();
+			});
 		});
 	});
 

@@ -6,8 +6,9 @@ var util = require('util');
 module.exports = function (grunt) {
 	var files = [
 		'logger.js',
+		'api/**/*.js',
 		'helpers/**/*.js',
-		'modules/*.js',
+		'modules/**/*.js',
 		'logic/*.js',
 		'schema/**/*.js',
 		'sql/**/*.js',
@@ -17,9 +18,12 @@ module.exports = function (grunt) {
 	var today = moment().format('HH:mm:ss DD/MM/YYYY');
 
 	var config = require('./config.json');
+	var version = 'vX.X.X';  // = config.version
 
-	var release_dir = __dirname + '/release/',
-	    version_dir = release_dir + config.version;
+	var release_dir = __dirname + '/release/';
+	var version_dir = release_dir + version;
+
+	var maxBufferSize = require('buffer').kMaxLength - 1;
 
 	grunt.initConfig({
 		obfuscator: {
@@ -42,6 +46,7 @@ module.exports = function (grunt) {
 						util.format('cp %s/config.json %s', __dirname, version_dir),
 						util.format('cp %s/package.json %s', __dirname, version_dir),
 						util.format('cp %s/genesisBlock.json %s', __dirname, version_dir),
+						util.format('cp %s/LICENSE %s', __dirname, version_dir),
 						util.format('mkdir -p %s/sql/migrations', version_dir),
 						util.format('cp %s/sql/*.sql %s/sql/', __dirname, version_dir),
 						util.format('cp %s/sql/migrations/*.sql %s/sql/migrations/', __dirname, version_dir),
@@ -63,11 +68,28 @@ module.exports = function (grunt) {
 					].join(' && ');
 				}
 			},
+
 			folder: {
 				command: 'mkdir -p ' + release_dir
 			},
+
 			build: {
 				command: 'cd ' + version_dir + '/ && touch build && echo "v' + today + '" > build'
+			},
+
+			coverage: {
+				command: 'export NODE_ENV=TEST && node_modules/.bin/istanbul cover --dir test/.coverage-unit ./node_modules/.bin/_mocha',
+				maxBuffer: maxBufferSize
+			},
+
+			coverageSingle: {
+				command: 'export NODE_ENV=TEST && node_modules/.bin/istanbul cover --dir test/.coverage-unit ./node_modules/.bin/_mocha $TEST',
+				maxBuffer: maxBufferSize
+			},
+
+			fetchCoverage: {
+				command: 'rm -rf ./test/.coverage-func.zip; curl -o ./test/.coverage-func.zip $HOST/coverage/download',
+				maxBuffer: maxBufferSize
 			}
 		},
 
@@ -79,39 +101,25 @@ module.exports = function (grunt) {
 					level: 6
 				},
 				files: [
-					{ expand: true, cwd: release_dir, src: [config.version + '/**'], dest: './' }
+					{ expand: true, cwd: release_dir, src: [version + '/**'], dest: './' }
 				]
 			}
 		},
 
-		jsdox: {
-			generate: {
-				src: [
-					'helpers/*.js'
-					// './modules/*.js'
-				],
-				dest: 'tmp/docs',
-				options: {
-					templateDir: 'var/jsdox'
-				}
-			}
-		},
-
-		jshint: {
+		eslint: {
 			options: {
-				jshintrc: true
+				configFile: '.eslintrc.json',
+				format: 'codeframe',
+				fix: false
 			},
-			all: [
-				'*.js',
-				'helpers/**/*.js',
-				'modules/**/*.js',
-				'logic/**/*.js',
-				'schema/**/*.js',
-				'sql/**/*.js',
-				'tasks/**/*.js',
-				'test/*.js',
-				'test/api/**/*.js',
-				'test/unit/**/*.js'
+			target: [
+				'api',
+				'helpers',
+				'modules',
+				'logic',
+				'schema',
+				'tasks',
+				'test'
 			]
 		}
 	});
@@ -119,11 +127,18 @@ module.exports = function (grunt) {
 	grunt.loadTasks('tasks');
 
 	grunt.loadNpmTasks('grunt-obfuscator');
-	grunt.loadNpmTasks('grunt-jsdox');
 	grunt.loadNpmTasks('grunt-exec');
 	grunt.loadNpmTasks('grunt-contrib-compress');
-	grunt.loadNpmTasks('grunt-contrib-jshint');
+	grunt.loadNpmTasks('grunt-eslint');
 
 	grunt.registerTask('default', ['release']);
 	grunt.registerTask('release', ['exec:folder', 'obfuscator', 'exec:package', 'exec:build', 'compress']);
+	grunt.registerTask('jenkins', ['exec:coverageSingle']);
+	grunt.registerTask('eslint-nofix', ['eslint']);
+	grunt.registerTask('test', ['eslint', 'exec:coverage']);
+
+	grunt.registerTask('eslint-fix', 'Run eslint and fix formatting', function () {
+		grunt.config.set('eslint.options.fix', true);
+		grunt.task.run('eslint');
+	});
 };

@@ -2,6 +2,8 @@
 
 // Root object
 var node = {};
+var Rounds = require('../modules/rounds.js');
+var slots = require('../helpers/slots.js');
 
 // Requires
 node.bignum = require('../helpers/bignum.js');
@@ -27,9 +29,9 @@ node.baseUrl = 'http://' + node.config.address + ':' + node.config.port;
 node.api = node.supertest(node.baseUrl);
 
 node.normalizer = 100000000; // Use this to convert SHIFT amount to normal value
-node.blockTime = constants.blockTime; // Block time in miliseconds
-node.blockTimePlus = constants.blockTime+2000; // Block time + 2 seconds in miliseconds
-node.version = constants.currentVersion; // Node version
+node.blockTime = node.constants.blockTime; // Block time in miliseconds
+node.blockTimePlus = node.constants.blockTime+2000; // Block time + 2 seconds in miliseconds
+node.version = node.constants.currentVersion; // Node version
 
 // Transaction fees
 node.fees = {
@@ -122,6 +124,20 @@ node.getHeight = function (cb) {
 	});
 };
 
+// Run callback on new round
+node.onNewRound = function (cb) {
+	node.getHeight(function (err, height) {
+		if (err) {
+			return cb(err);
+		} else {
+			var nextRound = Math.ceil(height / slots.delegates);
+			var blocksToWait = nextRound * slots.delegates - height;
+			node.debug('blocks to wait: '.grey, blocksToWait);
+			node.waitForNewBlock(height, blocksToWait, cb);
+		}
+	});
+};
+
 // Upon detecting a new block, do something
 node.onNewBlock = function (cb) {
 	node.getHeight(function (err, height) {
@@ -146,8 +162,13 @@ node.waitForBlocks = function (blocksToWait, cb) {
 
 // Waits for a new block to be created
 node.waitForNewBlock = function (height, blocksToWait, cb) {
+	if (blocksToWait === 0) {
+		return setImmediate(cb, null, height);
+	}
+
 	var actualHeight = height;
 	var counter = 1;
+	var target = height + blocksToWait;
 
 	node.async.doWhilst(
 		function (cb) {
@@ -160,11 +181,12 @@ node.waitForNewBlock = function (height, blocksToWait, cb) {
 					return cb(['Received bad response code', res.status, res.url].join(' '));
 				}
 
-				if (height + blocksToWait === res.body.height) {
+				node.debug('	Waiting for block:'.grey, 'Height:'.grey, res.body.height, 'Target:'.grey, target, 'Second:'.grey, counter++);
+
+				if (target === res.body.height) {
 					height = res.body.height;
 				}
 
-				node.debug('	Waiting for block:'.grey, 'Height:'.grey, height, 'Second:'.grey, counter++);
 				setTimeout(cb, 1000);
 			});
 
@@ -186,9 +208,9 @@ node.waitForNewBlock = function (height, blocksToWait, cb) {
 };
 
 // Adds peers to local node
-node.addPeers = function (numOfPeers, cb) {
+node.addPeers = function (numOfPeers, ip, cb) {
 	var operatingSystems = ['win32','win64','ubuntu','debian', 'centos'];
-	var port = 4000;
+	var port = 9999; // Frozen peer port
 	var os, version;
 	var i = 0;
 
@@ -205,9 +227,10 @@ node.addPeers = function (numOfPeers, cb) {
 				height: 1,
 				nethash: node.config.nethash,
 				os: os,
-				ip: '0.0.0.0',
+				ip: ip,
 				port: port,
-				version: version
+				version: version,
+				nonce: 'randomNonce'
 			}
 		});
 
@@ -334,7 +357,11 @@ function abstractRequest (options, done) {
 		request.send(options.params);
 	}
 
-	node.debug(['> Path:'.grey, options.verb.toUpperCase(), options.path].join(' '));
+	var verb = options.verb.toUpperCase();
+	node.debug(['> Path:'.grey, verb, options.path].join(' '));
+	if (verb === 'POST' || verb === 'PUT') {
+		node.debug(['> Data:'.grey, JSON.stringify(options.params)].join(' '));
+	}
 
 	if (done) {
 		request.end(function (err, res) {
@@ -360,6 +387,10 @@ node.post = function (path, params, done) {
 node.put = function (path, params, done) {
 	return abstractRequest({ verb: 'PUT', path: path, params: params }, done);
 };
+
+before(function (done) {
+	require('./common/globalBefore').waitUntilBlockchainReady(done);
+});
 
 // Exports
 module.exports = node;

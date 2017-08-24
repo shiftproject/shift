@@ -43,8 +43,7 @@ module.exports = {
 				type: 'string',
 				format: 'publicKey'
 			}
-		},
-		required: ['publicKey']
+		}
 	},
 	getDelegate: {
 		id: 'delegates.getDelegate',
@@ -73,7 +72,7 @@ module.exports = {
 			limit: {
 				type: 'integer',
 				minimum: 1,
-				maximum: 100
+				maximum: 1000
 			}
 		},
 		required: ['q']
@@ -107,6 +106,16 @@ module.exports = {
 			}
 		}
 	},
+	getFee: {
+		id: 'delegates.getFee',
+		type: 'object',
+		properties: {
+			height: {
+				type: 'integer',
+				minimum: 1
+			}
+		}
+	},
 	getForgedByAccount: {
 		id: 'delegates.getForgedByAccount',
 		type: 'object',
@@ -114,6 +123,12 @@ module.exports = {
 			generatorPublicKey: {
 				type: 'string',
 				format: 'publicKey'
+			},
+			start: {
+				type: 'integer'
+			},
+			end: {
+				type: 'integer'
 			}
 		},
 		required: ['generatorPublicKey']
