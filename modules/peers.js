@@ -683,13 +683,16 @@ Peers.prototype.shared = {
 	 * @return {String}   cb.obj.build Build information (if available, otherwise '')
 	 * @return {String}   cb.obj.commit Hash of last git commit (if available, otherwise '')
 	 * @return {String}   cb.obj.version Shift current version
+	 * @return {String}   cb.obj.minVersion Shift current minimal required version
+	 * @return {String}   cb.obj.serverTime Node's system clock
 	 */
 	version: function (req, cb) {
 		return setImmediate(cb, null, {
 			build: library.build,
 			commit: library.lastCommit,
 			version: constants.currentVersion,
-			minVersion: modules.system.getMinVersion()
+			minVersion: modules.system.getMinVersion(),
+			serverTime: (new Date()).getTime()			
 		});
 	}
 };
