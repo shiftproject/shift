@@ -344,6 +344,22 @@ API.prototype.getStatus = function (req, cb) {
 };
 
 /**
+ * Sandbox API wrapper (for DApps)
+ *
+ * @public
+ * @async
+ * @method sandboxApi
+ * @param  {string}   call Name of the function to be called 
+ * @param  {Object}   args Arguments
+ * @param  {Function} cb Callback function
+ */
+var sandboxHelper = require('../../helpers/sandbox.js');
+API.prototype.sandboxApi = function (call, args, cb) {
+	console.log('debug: extra added sandboxApi function');
+	sandboxHelper.callMethod(self, call, args, cb);
+}
+
+/**
  * Handle modules initialization:
  * - blocks
  * - system
