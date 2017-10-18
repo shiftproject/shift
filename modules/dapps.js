@@ -962,7 +962,8 @@ DApps.prototype.onBind = function (scope) {
 		peers: scope.peers,
 		sql: scope.sql,
 		multisignatures: scope.multisignatures, 
-		transport: scope.transport							
+		transport: scope.transport,
+		dapps: scope.dapps
 	};
 
 	__private.assetTypes[transactionTypes.DAPP].bind(
