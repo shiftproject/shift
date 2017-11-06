@@ -287,7 +287,7 @@ __private.dbSave = function (cb) {
  * @param {function} cb - Callback function.
  */
 Peers.prototype.sandboxApi = function (call, args, cb) {
-	sandboxHelper.callMethod(Peers.prototype.shared, call, args, cb);
+	sandboxHelper.callMethod(this.shared, call, args, cb);
 };
 
 /**

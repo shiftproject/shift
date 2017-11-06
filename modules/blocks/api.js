@@ -4,6 +4,7 @@ var _ = require('lodash');
 var BlockReward = require('../../logic/blockReward.js');
 var constants = require('../../helpers/constants.js');
 var OrderBy = require('../../helpers/orderBy.js');
+var sandboxHelper = require('../../helpers/sandbox.js');
 var schema = require('../../schema/blocks.js');
 var sql = require('../../sql/blocks.js');
 
@@ -353,9 +354,7 @@ API.prototype.getStatus = function (req, cb) {
  * @param  {Object}   args Arguments
  * @param  {Function} cb Callback function
  */
-var sandboxHelper = require('../../helpers/sandbox.js');
 API.prototype.sandboxApi = function (call, args, cb) {
-	console.log('debug: extra added sandboxApi function');
 	sandboxHelper.callMethod(self, call, args, cb);
 }
 
