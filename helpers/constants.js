@@ -50,6 +50,7 @@ module.exports = {
 	activeDelegates: 101,
 	addressLength: 208,
 	blockHeaderLength: 248,
+	blockSlotWindow: 5, // window in which a slot could be accepted	
 	blockTime: 27000,
 	blockReceiptTimeOut: 27*2, // 2 blocks
 	confirmationLength: 77,

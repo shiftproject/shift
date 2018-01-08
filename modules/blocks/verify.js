@@ -1,6 +1,7 @@
 'use strict';
 
 var async = require('async');
+var _ = require('lodash');
 var BlockReward = require('../../logic/blockReward.js');
 var constants = require('../../helpers/constants.js');
 var crypto = require('crypto');
@@ -11,6 +12,7 @@ var exceptions = require('../../helpers/exceptions.js');
 var modules, library, self, __private = {};
 
 __private.blockReward = new BlockReward();
+__private.lastNBlockIds = [];
 
 function Verify (logger, block, transaction, db) {
 	library = {
@@ -200,6 +202,174 @@ Verify.prototype.verifyBlock = function (block) {
 	if (totalFee !== block.totalFee) {
 		result.errors.push('Invalid total fee');
 	}
+
+	return result;
+};
+
+/**
+ * Verify block for fork cause one
+ *
+ * @private
+ * @method verifyBlock
+ * @param  {Object}  block Target block
+ * @param  {Object}  lastBlock Last block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyForkOne = function (block, lastBlock, result) {
+	if (block.previousBlock && block.previousBlock !== lastBlock.id) {
+		modules.delegates.fork(block, 1);
+		result.errors.push(['Invalid previous block:', block.previousBlock, 'expected:', lastBlock.id].join(' '));
+	}
+
+	return result;
+};
+
+/**
+ * Verify block slot according to timestamp
+ *
+ * @private
+ * @method verifyBlock
+ * @param  {Object}  block Target block
+ * @param  {Object}  lastBlock Last block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyBlockSlot = function (block, lastBlock, result) {
+	var blockSlotNumber = slots.getSlotNumber(block.timestamp);
+	var lastBlockSlotNumber = slots.getSlotNumber(lastBlock.timestamp);
+
+	if (blockSlotNumber > slots.getSlotNumber() || blockSlotNumber <= lastBlockSlotNumber) {
+		result.errors.push('Invalid block timestamp');
+	}
+
+	return result;
+};
+
+/**
+ * Verify block is not one of the last {constants.blockSlotWindow} saved blocks
+ *
+ * @private
+ * @method verifyAgainstLastNBlockIds
+ * @param  {Object}  block Target block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyAgainstLastNBlockIds = function (block, result) {
+  if (__private.lastNBlockIds.indexOf(block.id) !== -1) {
+    result.errors.push('Block already exists in chain');
+  };
+
+  return result;
+};
+
+/**
+ * Verify block slot window according to application time
+ *
+ * @private
+ * @method verifyBlockSlotWindow
+ * @param  {Object}  block Target block
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyBlockSlotWindow = function (block, result) {
+  var currentApplicationSlot = slots.getSlotNumber();
+  var blockSlot = slots.getSlotNumber(block.timestamp);
+
+  // Reject block if it's slot is older than constants.blockSlotWindow
+  if (currentApplicationSlot - blockSlot > constants.blockSlotWindow) {
+    result.errors.push('Block slot is too old');
+  }
+
+  // Reject block if it's slot is in the future
+  if (currentApplicationSlot < blockSlot) {
+    result.errors.push('Block slot is in the future');
+  }
+
+  return result;
+};
+
+Verify.prototype.onBlockchainReady = function () {
+  return library.db.query(sql.loadLastNBlockIds, {limit: constants.blockSlotWindow}).then(function (blockIds) {
+    __private.lastNBlockIds = _.map(blockIds, 'id');
+  }).catch(function (err) {
+    library.logger.error('Unable to load last ' + constants.blockSlotWindow + ' block ids');
+    library.logger.error(err);
+  });
+};
+
+Verify.prototype.onNewBlock = function (block) {
+  __private.lastNBlockIds.push(block.id);
+  if (__private.lastNBlockIds.length > constants.blockSlotWindow) {
+    __private.lastNBlockIds.shift();
+  }
+};
+
+/**
+ * Verify block before fork detection and return all possible errors related to block
+ *
+ * @public
+ * @method verifyReceipt
+ * @param  {Object}  block Full block
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+Verify.prototype.verifyReceipt = function (block) {
+	var lastBlock = modules.blocks.lastBlock.get();
+
+	block = __private.setHeight(block, lastBlock);
+
+	var result = { verified: false, errors: [] };
+
+	result = __private.verifySignature(block, result);
+	result = __private.verifyPreviousBlock(block, result);
+	result = __private.verifyAgainstLastNBlockIds(block, result);
+	result = __private.verifyBlockSlotWindow(block, result);
+	result = __private.verifyVersion(block, result);
+	result = __private.verifyReward(block, result);
+	result = __private.verifyId(block, result);
+	result = __private.verifyPayload(block, result);
+
+	result.verified = result.errors.length === 0;
+	result.errors.reverse();
+
+	return result;
+};
+
+/**
+ * Verify block before processing and return all possible errors related to block
+ *
+ * @public
+ * @method verifyBlock
+ * @param  {Object}  block Full block
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+Verify.prototype.verifyBlock = function (block) {
+	var lastBlock = modules.blocks.lastBlock.get();
+
+	block = __private.setHeight(block, lastBlock);
+
+	var result = { verified: false, errors: [] };
+
+	result = __private.verifySignature(block, result);
+	result = __private.verifyPreviousBlock(block, result);
+	result = __private.verifyVersion(block, result);
+	result = __private.verifyReward(block, result);
+	result = __private.verifyId(block, result);
+	result = __private.verifyPayload(block, result);
+
+	result = __private.verifyForkOne(block, lastBlock, result);
+	result = __private.verifyBlockSlot(block, lastBlock, result);
 
 	result.verified = result.errors.length === 0;
 	return result;
