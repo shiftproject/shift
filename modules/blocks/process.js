@@ -472,6 +472,10 @@ __private.receiveForkOne = function (block, lastBlock, cb) {
 					return setImmediate(seriesCb);
 				}
 			},
+			// Verify block slot window
+			function (seriesCb) {
+				modules.delegates.validateBlockSlot(tmp_block, seriesCb);
+			},
 			// Delete last 2 blocks
 			modules.blocks.chain.deleteLastBlock,
 			modules.blocks.chain.deleteLastBlock
