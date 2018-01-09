@@ -41,7 +41,7 @@
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
  */
 module.exports = {
-	currentVersion: '6.6.3',
+	currentVersion: '6.7.0',
 	minVersion: [
 		{ height: 1,      ver: '^6.1.0'},
 		{ height: 600000, ver: '^6.3.0'},
@@ -51,6 +51,7 @@ module.exports = {
 	activeDelegates: 101,
 	addressLength: 208,
 	blockHeaderLength: 248,
+	blockSlotWindow: 5, // window in which a slot could be accepted	
 	blockTime: 27000,
 	blockReceiptTimeOut: 27*2, // 2 blocks
 	confirmationLength: 77,
