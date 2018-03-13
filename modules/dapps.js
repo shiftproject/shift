@@ -638,8 +638,8 @@ __private.createRoutes = function (dapp, cb) {
 				}
 			});
 
-			router.use(httpApi.middleware.blockchainReady.bind(null, dappsModule.isLoaded));
-			app.use('/api/dapps', router);
+			library.network.app.use('/api/dapps/' + dapp.transactionId + '/api/', __private.routes[dapp.transactionId]);
+
 			library.network.app.use(function (err, req, res, next) {
 				if (!err) { return next(); }
 				library.logger.error('API error ' + req.url, err.message);
