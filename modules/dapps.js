@@ -639,6 +639,7 @@ __private.createRoutes = function (dapp, cb) {
 			});
 
 			library.network.app.use('/api/dapps/' + dapp.transactionId + '/api/', __private.routes[dapp.transactionId]);
+
 			library.network.app.use(function (err, req, res, next) {
 				if (!err) { return next(); }
 				library.logger.error('API error ' + req.url, err.message);
@@ -653,7 +654,7 @@ __private.createRoutes = function (dapp, cb) {
 };
 
 /**
- * Launchs daap steps:
+ * Launch dapp steps:
  * - validate schema parameter
  * - check if application is already launched
  * - get the application
@@ -956,10 +957,14 @@ DApps.prototype.request = function (dappid, method, path, query, cb) {
  */
 DApps.prototype.onBind = function (scope) {
 	modules = {
+		blocks: scope.blocks.shared,				 
 		transactions: scope.transactions,
 		accounts: scope.accounts,
 		peers: scope.peers,
 		sql: scope.sql,
+		multisignatures: scope.multisignatures, 
+		transport: scope.transport,
+		dapps: scope.dapps
 	};
 
 	__private.assetTypes[transactionTypes.DAPP].bind(

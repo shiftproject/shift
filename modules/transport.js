@@ -686,6 +686,8 @@ Transport.prototype.internal = {
 	},
 
 	postDappMessage: function (query, cb) {
+		if (query.body && query.body.body) query = query.body;
+
 		try {
 			if (!query.dappid) {
 				return setImmediate(cb, null, {success: false, message: 'Missing dappid'});
@@ -723,6 +725,8 @@ Transport.prototype.internal = {
 	},
 
 	postDappRequest: function (query, cb) {
+		if (query.body && query.body.body) query = query.body;
+		
 		try {
 			if (!query.dappid) {
 				return setImmediate(cb, null, {success: false, message: 'Missing dappid'});

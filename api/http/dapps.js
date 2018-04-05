@@ -60,7 +60,8 @@ function DappsHttpApi (dappsModule, app) {
 	router.post('/uninstall', httpApi.middleware.sanitize('body', schema.uninstall, dappsModule.internal.uninstall));
 	router.post('/stop', httpApi.middleware.sanitize('body', schema.stop, dappsModule.internal.stop));
 
-	httpApi.registerEndpoint('/api/dapps', app, router, dappsModule.isLoaded);
+	router.use(httpApi.middleware.blockchainReady.bind(null, dappsModule.isLoaded));
+	app.use('/api/dapps', router);
 }
 
 module.exports = DappsHttpApi;

@@ -1,6 +1,7 @@
 'use strict';
 
 var async = require('async');
+var _ = require('lodash');
 var BlockReward = require('../../logic/blockReward.js');
 var constants = require('../../helpers/constants.js');
 var crypto = require('crypto');
@@ -11,6 +12,7 @@ var exceptions = require('../../helpers/exceptions.js');
 var modules, library, self, __private = {};
 
 __private.blockReward = new BlockReward();
+__private.lastNBlockIds = [];
 
 function Verify (logger, block, transaction, db) {
 	library = {
@@ -29,7 +31,7 @@ function Verify (logger, block, transaction, db) {
 
 /**
  * Check transaction - perform transaction validation when processing block
- * //FIXME: Some check can be redundant probably, see: logic.transactionPool
+ * FIXME: Some checks are probably redundant, see: logic.transactionPool
  *
  * @private
  * @async
@@ -88,45 +90,34 @@ __private.checkTransaction = function (block, transaction, cb) {
 };
 
 /**
- * Verify block and return all possible errors related to block
+ * Set height according to the given last block
  *
- * @public
+ * @private
  * @method verifyBlock
- * @param  {Object}  block Full block
+ * @method verifyReceipt
+ * @param  {Object}  block Target block
+ * @param  {Object}  lastBlock Last block
+ * @return {Object}  block Target block
+ */
+__private.setHeight = function (block, lastBlock) {
+	block.height = lastBlock.height + 1;
+
+	return block;
+};
+
+/**
+ * Verify block signature
+ *
+ * @private
+ * @method verifyBlock
+ * @method verifyReceipt
+ * @param  {Object}  block Target block
+ * @param  {Object}  result Verification results
  * @return {Object}  result Verification results
  * @return {boolean} result.verified Indicator that verification passed
  * @return {Array}   result.errors Array of validation errors
  */
-Verify.prototype.verifyBlock = function (block) {
-	var lastBlock = modules.blocks.lastBlock.get();
-	var result = { verified: false, errors: [] };
-
-	try {
-		// Get block ID
-		// FIXME: Why we don't have it?
-		block.id = library.logic.block.getId(block);
-	} catch (e) {
-		result.errors.push(e.toString());
-	}
-
-	// Set block height
-	block.height = lastBlock.height + 1;
-
-	if (!block.previousBlock && block.height !== 1) {
-		result.errors.push('Invalid previous block');
-	} else if (block.previousBlock !== lastBlock.id) {
-		// Fork: Same height but different previous block id.
-		modules.delegates.fork(block, 1);
-		result.errors.push(['Invalid previous block:', block.previousBlock, 'expected:', lastBlock.id].join(' '));
-	}
-
-	// Calculate expected rewards
-	var expectedReward = __private.blockReward.calcReward(block.height);
-
-	if (block.height !== 1 && expectedReward !== block.reward && exceptions.blockRewards.indexOf(block.id) === -1) {
-		result.errors.push(['Invalid block reward:', block.reward, 'expected:', expectedReward].join(' '));
-	}
-
+__private.verifySignature = function (block, result) {
 	var valid;
 
 	try {
@@ -139,35 +130,124 @@ Verify.prototype.verifyBlock = function (block) {
 		result.errors.push('Failed to verify block signature');
 	}
 
+	return result;
+};
+
+/**
+ * Verify previous block
+ *
+ * @private
+ * @method verifyBlock
+ * @method verifyReceipt
+ * @param  {Object}  block Target block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyPreviousBlock = function (block, result) {
+	if (!block.previousBlock && block.height !== 1) {
+		result.errors.push('Invalid previous block');
+	}
+
+	return result;
+};
+
+/**
+ * Verify block version
+ *
+ * @private
+ * @method verifyBlock
+ * @method verifyReceipt
+ * @param  {Object}  block Target block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyVersion = function (block, result) {
 	if (block.version > 0) {
 		result.errors.push('Invalid block version');
 	}
 
-	// Calculate expected block slot
-	var blockSlotNumber = slots.getSlotNumber(block.timestamp);
-	var lastBlockSlotNumber = slots.getSlotNumber(lastBlock.timestamp);
+	return result;
+};
 
-	if (blockSlotNumber > slots.getSlotNumber() || blockSlotNumber <= lastBlockSlotNumber) {
-		result.errors.push('Invalid block timestamp');
+/**
+ * Verify block reward
+ *
+ * @private
+ * @method verifyBlock
+ * @method verifyReceipt
+ * @param  {Object}  block Target block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyReward = function (block, result) {
+	var expectedReward = __private.blockReward.calcReward(block.height);
+
+	if (block.height !== 1 && expectedReward !== block.reward && exceptions.blockRewards.indexOf(block.id) === -1) {
+		result.errors.push(['Invalid block reward:', block.reward, 'expected:', expectedReward].join(' '));
 	}
 
+	return result;
+};
+
+/**
+ * Verify block id
+ *
+ * @private
+ * @method verifyBlock
+ * @method verifyReceipt
+ * @param  {Object}  block Target block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyId = function (block, result) {
+	try {
+		// Get block ID
+		// FIXME: Why we don't have it?
+		block.id = library.logic.block.getId(block);
+	} catch (e) {
+		result.errors.push(e.toString());
+	}
+
+	return result;
+};
+
+/**
+ * Verify block payload (transactions)
+ *
+ * @private
+ * @method verifyBlock
+ * @method verifyReceipt
+ * @param  {Object}  block Target block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyPayload = function (block, result) {
 	if (block.payloadLength > constants.maxPayloadLength) {
-		result.errors.push('Payload length is too high');
+		result.errors.push('Payload length is too long');
 	}
 
 	if (block.transactions.length !== block.numberOfTransactions) {
-		result.errors.push('Invalid number of transactions');
+		result.errors.push('Included transactions do not match block transactions count');
 	}
 
 	if (block.transactions.length > constants.maxTxsPerBlock) {
-		result.errors.push('Transactions length is too high');
+		result.errors.push('Number of transactions exceeds maximum per block');
 	}
 
-	// Checking if transactions of the block adds up to block values.
-	var totalAmount = 0,
-	    totalFee = 0,
-	    payloadHash = crypto.createHash('sha256'),
-	    appliedTransactions = {};
+	var totalAmount = 0;
+	var totalFee = 0;
+	var payloadHash = crypto.createHash('sha256');
+	var appliedTransactions = {};
 
 	for (var i in block.transactions) {
 		var transaction = block.transactions[i];
@@ -201,7 +281,177 @@ Verify.prototype.verifyBlock = function (block) {
 		result.errors.push('Invalid total fee');
 	}
 
+	return result;
+};
+
+/**
+ * Verify block for fork cause one
+ *
+ * @private
+ * @method verifyBlock
+ * @param  {Object}  block Target block
+ * @param  {Object}  lastBlock Last block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyForkOne = function (block, lastBlock, result) {
+	if (block.previousBlock && block.previousBlock !== lastBlock.id) {
+		modules.delegates.fork(block, 1);
+		result.errors.push(['Invalid previous block:', block.previousBlock, 'expected:', lastBlock.id].join(' '));
+	}
+
+	return result;
+};
+
+/**
+ * Verify block slot according to timestamp
+ *
+ * @private
+ * @method verifyBlock
+ * @param  {Object}  block Target block
+ * @param  {Object}  lastBlock Last block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyBlockSlot = function (block, lastBlock, result) {
+	var blockSlotNumber = slots.getSlotNumber(block.timestamp);
+	var lastBlockSlotNumber = slots.getSlotNumber(lastBlock.timestamp);
+
+	if (blockSlotNumber > slots.getSlotNumber() || blockSlotNumber <= lastBlockSlotNumber) {
+		result.errors.push('Invalid block timestamp');
+	}
+
+	return result;
+};
+
+/**
+ * Verify block is not one of the last {constants.blockSlotWindow} saved blocks
+ *
+ * @private
+ * @method verifyAgainstLastNBlockIds
+ * @param  {Object}  block Target block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyAgainstLastNBlockIds = function (block, result) {
+  if (__private.lastNBlockIds.indexOf(block.id) !== -1) {
+    result.errors.push('Block already exists in chain');
+  };
+
+  return result;
+};
+
+/**
+ * Verify block slot window according to application time
+ *
+ * @private
+ * @method verifyBlockSlotWindow
+ * @param  {Object}  block Target block
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyBlockSlotWindow = function (block, result) {
+  var currentApplicationSlot = slots.getSlotNumber();
+  var blockSlot = slots.getSlotNumber(block.timestamp);
+
+  // Reject block if it's slot is older than constants.blockSlotWindow
+  if (currentApplicationSlot - blockSlot > constants.blockSlotWindow) {
+    result.errors.push('Block slot is too old');
+  }
+
+  // Reject block if it's slot is in the future
+  if (currentApplicationSlot < blockSlot) {
+    result.errors.push('Block slot is in the future');
+  }
+
+  return result;
+};
+
+Verify.prototype.onBlockchainReady = function () {
+  return library.db.query(sql.loadLastNBlockIds, {limit: constants.blockSlotWindow}).then(function (blockIds) {
+    __private.lastNBlockIds = _.map(blockIds, 'id');
+  }).catch(function (err) {
+    library.logger.error('Unable to load last ' + constants.blockSlotWindow + ' block ids');
+    library.logger.error(err);
+  });
+};
+
+Verify.prototype.onNewBlock = function (block) {
+  __private.lastNBlockIds.push(block.id);
+  if (__private.lastNBlockIds.length > constants.blockSlotWindow) {
+    __private.lastNBlockIds.shift();
+  }
+};
+
+/**
+ * Verify block before fork detection and return all possible errors related to block
+ *
+ * @public
+ * @method verifyReceipt
+ * @param  {Object}  block Full block
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+Verify.prototype.verifyReceipt = function (block) {
+	var lastBlock = modules.blocks.lastBlock.get();
+
+	block = __private.setHeight(block, lastBlock);
+
+	var result = { verified: false, errors: [] };
+
+	result = __private.verifySignature(block, result);
+	result = __private.verifyPreviousBlock(block, result);
+	result = __private.verifyAgainstLastNBlockIds(block, result);
+	result = __private.verifyBlockSlotWindow(block, result);
+	result = __private.verifyVersion(block, result);
+	result = __private.verifyReward(block, result);
+	result = __private.verifyId(block, result);
+	result = __private.verifyPayload(block, result);
+
 	result.verified = result.errors.length === 0;
+	result.errors.reverse();
+
+	return result;
+};
+
+/**
+ * Verify block before processing and return all possible errors related to block
+ *
+ * @public
+ * @method verifyBlock
+ * @param  {Object}  block Full block
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+Verify.prototype.verifyBlock = function (block) {
+	var lastBlock = modules.blocks.lastBlock.get();
+
+	block = __private.setHeight(block, lastBlock);
+
+	var result = { verified: false, errors: [] };
+
+	result = __private.verifySignature(block, result);
+	result = __private.verifyPreviousBlock(block, result);
+	result = __private.verifyVersion(block, result);
+	result = __private.verifyReward(block, result);
+	result = __private.verifyId(block, result);
+	result = __private.verifyPayload(block, result);
+
+	result = __private.verifyForkOne(block, lastBlock, result);
+	result = __private.verifyBlockSlot(block, lastBlock, result);
+
+	result.verified = result.errors.length === 0;
+	result.errors.reverse();
+
 	return result;
 };
 
@@ -222,7 +472,7 @@ Verify.prototype.verifyBlock = function (block) {
  * @return {Function} cb Callback function from params (through setImmediate)
  * @return {Object}   cb.err Error if occurred
  */
-Verify.prototype.processBlock = function (block, broadcast, cb, saveBlock, checked) {
+Verify.prototype.processBlock = function (block, broadcast, cb, saveBlock) {
 	if (modules.blocks.isCleaning.get()) {
 		// Break processing if node shutdown reqested
 		return setImmediate(cb, 'Cleaning up');
@@ -231,92 +481,6 @@ Verify.prototype.processBlock = function (block, broadcast, cb, saveBlock, check
 		return setImmediate(cb, 'Blockchain is loading');
 	}
 
-	async.series({
-		normalizeBlock: function (seriesCb) {
-			if (!checked) {
-				try {
-					block = library.logic.block.objectNormalize(block);
-				} catch (err) {
-					return setImmediate(seriesCb, err);
-				}
-			}
-
-			return setImmediate(seriesCb);
-		},
-		verifyBlock: function (seriesCb) {
-			if (!checked) {
-				// Sanity check of the block, if values are coherent
-				// No access to database
-				var check = self.verifyBlock(block);
-
-				if (!check.verified) {
-					library.logger.error(['Block', block.id, 'verification failed'].join(' '), check.errors.join(', '));
-					return setImmediate(seriesCb, check.errors[0]);
-				}
-			}
-
-			return setImmediate(seriesCb);
-		},
-		checkExists: function (seriesCb) {
-			// Check if block id is already in the database (very low probability of hash collision)
-			// TODO: In case of hash-collision, to me it would be a special autofork...
-			// DATABASE: read only
-			library.db.query(sql.getBlockId, { id: block.id }).then(function (rows) {
-				if (rows.length > 0) {
-					return setImmediate(seriesCb, ['Block', block.id, 'already exists'].join(' '));
-				} else {
-					return setImmediate(seriesCb);
-				}
-			});
-		},
-		validateBlockSlot: function (seriesCb) {
-			if (!checked) {
-				// Check if block was generated by the right active delagate. Otherwise, fork 3
-				// DATABASE: Read only to mem_accounts to extract active delegate list
-				modules.delegates.validateBlockSlot(block, function (err) {
-					if (err) {
-						// Fork: Delegate does not match calculated slot
-						modules.delegates.fork(block, 3);
-						return setImmediate(seriesCb, err);
-					} else {
-						return setImmediate(seriesCb);
-					}
-				});
-			} else {
-				return setImmediate(seriesCb);
-			}
-		},
-		checkTransactions: function (seriesCb) {
-			// Check against the mem_* tables that we can perform the transactions included in the block
-			async.eachSeries(block.transactions, function (transaction, eachSeriesCb) {
-				__private.checkTransaction(block, transaction, eachSeriesCb);
-			}, function (err) {
-				return setImmediate(seriesCb, err);
-			});
-		}
-	}, function (err) {
-		if (err) {
-			return setImmediate(cb, err);
-		} else {
-			// The block and the transactions are OK i.e:
-			// * Block and transactions have valid values (signatures, block slots, etc...)
-			// * The check against database state passed (for instance sender has enough LSK, votes are under 101, etc...)
-			// We thus update the database with the transactions values, save the block and tick it
-			modules.blocks.chain.applyBlock(block, broadcast, cb, saveBlock);
-		}
-	});
-};
-
-/**
- * Main function to validate block before processing it
- *
- * @async
- * @param  {Object}   block Full block
- * @param  {Function} cb Callback function
- * @return {Function} cb Callback function from params (through setImmediate)
- * @return {Object}   cb.err Error if occurred
- */
-Verify.prototype.checkBlock = function (block, cb) {
 	async.series({
 		normalizeBlock: function (seriesCb) {
 			try {
@@ -339,6 +503,18 @@ Verify.prototype.checkBlock = function (block, cb) {
 
 			return setImmediate(seriesCb);
 		},
+		checkExists: function (seriesCb) {
+			// Check if block id is already in the database (very low probability of hash collision)
+			// TODO: In case of hash-collision, to me it would be a special autofork...
+			// DATABASE: read only
+			library.db.query(sql.getBlockId, { id: block.id }).then(function (rows) {
+				if (rows.length > 0) {
+					return setImmediate(seriesCb, ['Block', block.id, 'already exists'].join(' '));
+				} else {
+					return setImmediate(seriesCb);
+				}
+			});
+		},
 		validateBlockSlot: function (seriesCb) {
 			// Check if block was generated by the right active delagate. Otherwise, fork 3
 			// DATABASE: Read only to mem_accounts to extract active delegate list
@@ -351,9 +527,25 @@ Verify.prototype.checkBlock = function (block, cb) {
 					return setImmediate(seriesCb);
 				}
 			});
+		},
+		checkTransactions: function (seriesCb) {
+			// Check against the mem_* tables that we can perform the transactions included in the block
+			async.eachSeries(block.transactions, function (transaction, eachSeriesCb) {
+				__private.checkTransaction(block, transaction, eachSeriesCb);
+			}, function (err) {
+				return setImmediate(seriesCb, err);
+			});
 		}
 	}, function (err) {
-		return setImmediate(cb, err);
+		if (err) {
+			return setImmediate(cb, err);
+		} else {
+			// The block and the transactions are OK i.e:
+			// * Block and transactions have valid values (signatures, block slots, etc...)
+			// * The check against database state passed (for instance sender has enough LSK, votes are under 101, etc...)
+			// We thus update the database with the transactions values, save the block and tick it
+			modules.blocks.chain.applyBlock(block, broadcast, cb, saveBlock);
+		}
 	});
 };
 

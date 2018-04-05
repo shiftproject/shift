@@ -569,7 +569,7 @@ Transactions.prototype.fillPool = function (cb) {
  * @param {function} cb - Callback function.
  */
 Transactions.prototype.sandboxApi = function (call, args, cb) {
-	sandboxHelper.callMethod(shared, call, args, cb);
+	sandboxHelper.callMethod(this.shared, call, args, cb);
 };
 
 /**
