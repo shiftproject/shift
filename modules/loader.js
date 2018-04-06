@@ -589,18 +589,15 @@ __private.loadBlocksFromNetwork = function (cb) {
 };
 
 /**
- * - Undoes unconfirmed transactions.
- * - Establish broadhash consensus
- * - Syncs: loadBlocksFromNetwork, updateSystem
- * - Establish broadhash consensus
- * - Applies unconfirmed transactions
+ * - Establishes broadhash consensus before sync.
+ * - Performs sync operation: loads blocks from network.
+ * - Update headers: broadhash and height
+ * - Establishes broadhash consensus after sync.
  * @private
  * @implements {async.series}
- * @implements {modules.transactions.undoUnconfirmedList}
  * @implements {modules.transport.getPeers}
  * @implements {__private.loadBlocksFromNetwork}
  * @implements {modules.system.update}
- * @implements {modules.transactions.applyUnconfirmedList}
  * @param {function} cb
  * @todo check err actions
  */
@@ -612,10 +609,6 @@ __private.sync = function (cb) {
 	__private.syncTrigger(true);
 
 	async.series({
-		undoUnconfirmedList: function (seriesCb) {
-			library.logger.debug('Undoing unconfirmed transactions before sync');
-			return modules.transactions.undoUnconfirmedList(seriesCb);
-		},
 		getPeersBefore: function (seriesCb) {
 			library.logger.debug('Establishing broadhash consensus before sync');
 			return modules.transport.getPeers({limit: constants.maxPeers}, seriesCb);
@@ -624,15 +617,12 @@ __private.sync = function (cb) {
 			return __private.loadBlocksFromNetwork(seriesCb);
 		},
 		updateSystem: function (seriesCb) {
+			// Update our own headers: broadhash and height
 			return modules.system.update(seriesCb);
 		},
 		getPeersAfter: function (seriesCb) {
 			library.logger.debug('Establishing broadhash consensus after sync');
 			return modules.transport.getPeers({limit: constants.maxPeers}, seriesCb);
-		},
-		applyUnconfirmedList: function (seriesCb) {
-			library.logger.debug('Applying unconfirmed transactions after sync');
-			return modules.transactions.applyUnconfirmedList(seriesCb);
 		}
 	}, function (err) {
 		__private.isActive = false;
