@@ -400,6 +400,9 @@ rebuild_shift() {
 }
 
 install_ipfs() {
+  echo -n "IPFS is planned to be removed from Shift manager, use Shift cluster setup instead."
+  return 0;
+
   sudo apt-get update  &> /dev/null;
   if [ ! -x "$(command -v jq)" ]; then
       echo -n "jq is not installed. Installing jq ... "
