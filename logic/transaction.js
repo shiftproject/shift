@@ -530,10 +530,10 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 	}
 
 	// Verify second signature
-	if (requester.secondSignature || sender.secondSignature) {
+	if (trs.secondSignature || sender.secondSignature) {
 		try {
 			valid = false;
-			valid = this.verifySecondSignature(trs, (requester.secondPublicKey || sender.secondPublicKey), trs.signSignature);
+			valid = this.verifySecondSignature(trs, (trs.secondPublicKey || sender.secondPublicKey), trs.signSignature);
 		} catch (e) {
 			return setImmediate(cb, e.toString());
 		}
