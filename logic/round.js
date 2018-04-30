@@ -2,7 +2,17 @@
 
 var pgp = require('pg-promise');
 var RoundChanges = require('../helpers/RoundChanges.js');
+var BlockReward = require('./blockReward.js');
 var sql = require('../sql/rounds.js');
+var constants = require('../helpers/constants.js');
+
+var __private = {};
+
+/**
+ * Creates a blockReward instance.
+ * @private
+ */
+__private.blockReward = new BlockReward();
 
 /**
  * Validates required scope properties.
@@ -27,6 +37,7 @@ function Round (scope, t) {
 		},
 		modules: {
 			accounts: scope.modules.accounts,
+			system: scope.modules.system,
 		},
 		block: {
 			generatorPublicKey: scope.block.generatorPublicKey,
@@ -136,7 +147,7 @@ Round.prototype.flushRound = function () {
 };
 
 /**
- * Calls sql truncateBlocks: deletes blocks greather than height from 
+ * Calls sql truncateBlocks: deletes blocks greather than height from
  * `blocks` table.
  * @return {function} Promise
  */
@@ -192,6 +203,26 @@ Round.prototype.applyRound = function () {
 			round: this.scope.round,
 			fees: (this.scope.backwards ? -changes.fees : changes.fees),
 			rewards: (this.scope.backwards ? -changes.rewards : changes.rewards)
+		}));
+	}
+
+	// Batch rewards to team account per round
+	var salary = __private.blockReward.calcSalary(this.scope.block.height);
+	this.scope.library.logger.info('**** salary at height ' + this.scope.block.height.toString() + ' is ' + salary.toString());
+
+	if (salary > 0) {
+		var teamAccount = this.scope.modules.system.getTeamAccount();
+		this.scope.library.logger.info('**** teamAccount: ' + teamAccount.toString());
+		salary *= this.scope.roundDelegates.length;
+		this.scope.library.logger.info('**** salary for round: ' + salary.toString());
+
+		queries.push(this.scope.modules.accounts.mergeAccountAndGet({
+			publicKey: teamAccount,
+			balance: (this.scope.backwards ? -salary : salary),
+			u_balance: (this.scope.backwards ? -salary : salary),
+			blockId: this.scope.block.id,
+			round: this.scope.round,
+			rewards: (this.scope.backwards ? -salary : salary)
 		}));
 	}
 
