@@ -450,14 +450,14 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 	}
 
 	// Check for missing requester second signature
-//	if (trs.requesterPublicKey && requester.secondSignature && !trs.signSignature) {
-//		return setImmediate(cb, 'Missing requester second signature');
-//	}
+	if (trs.requesterPublicKey && requester.secondSignature && !trs.signSignature) {
+		return setImmediate(cb, 'Missing requester second signature');
+	}
 
 	// If second signature provided, check if requester has one enabled
-//	if (trs.requesterPublicKey && !requester.secondSignature && (trs.signSignature && trs.signSignature.length > 0)) {
-//		return setImmediate(cb, 'Requester does not have a second signature');
-//	}
+	if (trs.requesterPublicKey && !requester.secondSignature && (trs.signSignature && trs.signSignature.length > 0)) {
+		return setImmediate(cb, 'Requester does not have a second signature');
+	}
 
 	// Check sender public key
 	if (sender.publicKey && sender.publicKey !== trs.senderPublicKey) {
@@ -481,7 +481,7 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 	}
 
 	// Determine multisignatures from sender or transaction asset
-	var multisignatures = sender.multisignatures || sender.u_multisignatures || [];
+	var multisignatures = (sender.multisignatures/* || sender.u_multisignatures*/ || []).slice(); // Clone array
 	if (multisignatures.length === 0) {
 		if (trs.asset && trs.asset.multisignature && trs.asset.multisignature.keysgroup) {
 
@@ -499,12 +499,14 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 
 	// Check requester public key
 	if (trs.requesterPublicKey) {
-		multisignatures.push(trs.senderPublicKey);
+		// Needs fix: Reject transactions with requesterPublicKey property for now
+		return setImmediate(cb, 'Multisig request is not allowed');
+/*		multisignatures.push(trs.senderPublicKey);
 
-		if (sender.multisignatures.indexOf(trs.requesterPublicKey) < 0) {
+		if (!Array.isArray(sender.multisignatures) || sender.multisignatures.indexOf(trs.requesterPublicKey) < 0) {
 			return setImmediate(cb, 'Account does not belong to multisignature group');
 		}
-	}
+*/	}
 
 	// Verify signature
 	try {
@@ -528,10 +530,10 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 	}
 
 	// Verify second signature
-	if (/*requester.secondSignature ||*/ sender.secondSignature) {
+	if (trs.secondSignature || sender.secondSignature) {
 		try {
 			valid = false;
-			valid = this.verifySecondSignature(trs, (/*requester.secondPublicKey ||*/ sender.secondPublicKey), trs.signSignature);
+			valid = this.verifySecondSignature(trs, (trs.secondPublicKey || sender.secondPublicKey), trs.signSignature);
 		} catch (e) {
 			return setImmediate(cb, e.toString());
 		}

@@ -1,4 +1,4 @@
-## SHIFT version 6.7.1t
+## SHIFT version 6.8.0t
 
 ## Installation
 
@@ -40,7 +40,7 @@ Shift node status, is it running or not?
 ```
 ./shift_manager.bash status
 ```
-Rebuild blockchain fron official snapshot
+Rebuild blockchain from official snapshot
 ```
 ./shift_manager.bash rebuild
 ```
@@ -49,7 +49,6 @@ Rebuild blockchain fron official snapshot
 - Mariusz Serek <mariusz@serek.net>
 - Goldeneye (Shift Team)
 - Ralfs (Shift Team)
-- Jan (Shift Team)
 - Joey <shiftcurrency@gmail.com>
 - Boris Povod <boris@crypti.me>
 - Pavel Nekrasov <landgraf.paul@gmail.com>
