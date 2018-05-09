@@ -624,23 +624,36 @@ __private.createRoutes = function (dapp, cb) {
 			routes.forEach(function (router) {
 				if (router.method === 'get' || router.method === 'post' || router.method === 'put') {
 					__private.routes[dapp.transactionId][router.method](router.path, function (req, res) {
+					    if (req.headers && req.headers['content-type'] && req.headers['content-type'].indexOf('multipart/form-data') != -1) {			    	
+					        var chunks = [];
+					        req.on('data', function(chunk) { 
+					            chunks.push(chunk)
+					        });	
+					        req.on('end', function() { 
+					        	req.body = Buffer.concat(chunks);
+								sendRequest(req);
+					        }); 
+					    } else {
+							sendRequest(router.method === 'get' ? req.query : req.body);
+					    }
 
-						self.request(dapp.transactionId, router.method, router.path, (router.method === 'get') ? req.query : req.body, function (err, body) {
-							if (!err && body.error) {
-								err = body.error;
-							}
-							if (err) {
-								body = {error: err};
-							}
-							body.success = !err;
-							res.json(body);
-						});
+					    function sendRequest(query) {
+							self.request(dapp.transactionId, router.method, router.path, query, function (err, body) {
+								if (!err && body.error) {
+									err = body.error;
+								}
+								if (err) {
+									body = {error: err};
+								}
+								body.success = !err;
+								res.json(body);
+							});
+						}
 					});
 				}
 			});
 
 			library.network.app.use('/api/dapps/' + dapp.transactionId + '/api/', __private.routes[dapp.transactionId]);
-
 			library.network.app.use(function (err, req, res, next) {
 				if (!err) { return next(); }
 				library.logger.error('API error ' + req.url, err.message);
