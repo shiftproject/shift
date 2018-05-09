@@ -413,6 +413,7 @@ TransactionPool.prototype.reindexQueues = function () {
 TransactionPool.prototype.processBundled = function (cb) {
 	var bundled = self.getBundledTransactionList(true, self.bundleLimit);
 
+	// Execute in sequence via balancesSequence
 	library.balancesSequence.add(function (cb) {
 		async.eachSeries(bundled, function (transaction, eachSeriesCb) {
 			if (!transaction) {
@@ -551,6 +552,7 @@ TransactionPool.prototype.applyUnconfirmedIds = function (ids, cb) {
 TransactionPool.prototype.undoUnconfirmedList = function (cb) {
 	var ids = [];
 
+	// Execute in sequence via balancesSequence
 	library.balancesSequence.add(function (cb) {
 		async.eachSeries(self.getUnconfirmedTransactionList(false), function (transaction, eachSeriesCb) {
 			if (transaction) {
@@ -757,6 +759,7 @@ __private.processVerifyTransaction = function (transaction, broadcast, cb) {
  * @return {setImmediateCallback} error | cb
  */
 __private.applyUnconfirmedList = function (transactions, cb) {
+	// Execute in sequence via balancesSequence
 	library.balancesSequence.add(function (cb) {
 		async.eachSeries(transactions, function (transaction, eachSeriesCb) {
 			if (typeof transaction === 'string') {
