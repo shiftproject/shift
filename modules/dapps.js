@@ -35,6 +35,7 @@ __private.dappsPath = path.join(process.cwd(), 'dapps');
 __private.sandboxes = {};
 __private.dappready = {};
 __private.routes = {};
+__private.lastError = null;
 
 /**
  * Initializes library with scope content and generates instances for:
@@ -76,15 +77,15 @@ function DApps (cb, scope) {
 	__private.assetTypes[transactionTypes.DAPP] = library.logic.transaction.attachAssetType(
 		transactionTypes.DAPP,
 		new DApp(
-			scope.db, 
-			scope.logger, 
-			scope.schema, 
+			scope.db,
+			scope.logger,
+			scope.schema,
 			scope.network
 		)
 	);
 
 	__private.assetTypes[transactionTypes.IN_TRANSFER] = library.logic.transaction.attachAssetType(
-		transactionTypes.IN_TRANSFER, 
+		transactionTypes.IN_TRANSFER,
 		new InTransfer(
 			scope.db,
 			scope.schema
@@ -92,7 +93,7 @@ function DApps (cb, scope) {
 	);
 
 	__private.assetTypes[transactionTypes.OUT_TRANSFER] = library.logic.transaction.attachAssetType(
-		transactionTypes.OUT_TRANSFER, 
+		transactionTypes.OUT_TRANSFER,
 		new OutTransfer(
 			scope.db,
 			scope.schema,
@@ -541,7 +542,7 @@ __private.installDApp = function (dapp, cb) {
 };
 
 /**
- * Creates a public link (symbolic link) between public path and 
+ * Creates a public link (symbolic link) between public path and
  * public dapps with transaction id.
  * @private
  * @param {dapp} dapp
@@ -734,6 +735,7 @@ __private.launchDApp = function (body, cb) {
 			});
 		},
 		function (dapp, waterCb) {
+			dapp.relaunchBody = body;
 			__private.createSandbox(dapp, body.params || ['', 'modules.full.json'], function (err) {
 				if (err) {
 					__private.launched[body.id] = false;
@@ -746,7 +748,6 @@ __private.launchDApp = function (body, cb) {
 		function (dapp, waterCb) {
 			__private.createRoutes(dapp, function (err) {
 				if (err) {
-					__private.launched[body.id] = false;
 					__private.stopDApp(dapp, function (err) {
 						if (err) {
 							return setImmediate(waterCb, 'Failed to stop application');
@@ -773,7 +774,7 @@ __private.launchDApp = function (body, cb) {
  * Opens dapp `config.json` file and for each peer calls update.
  * Once all peers are updated, opens `blockchain.json` file, calls
  * createTables and creates sandbox.
- * Listens sanbox events 'exit' and 'error' to stop dapp.
+ * Listens sandbox events 'exit' and 'error' to stop dapp.
  * @private
  * @implements {modules.peers.update}
  * @implements {modules.sql.createTables}
@@ -809,19 +810,26 @@ __private.createSandbox = function (dapp, params, cb) {
 			return setImmediate(cb, err);
 		}
 
-		var blockchain;
+		if (__private.lastError == null) {
+			var blockchain;
 
-		try {
-			blockchain = require(path.join(dappPath, 'blockchain.json'));
-		} catch (e) {
-			return setImmediate(cb, 'Failed to open blockchain.json file');
-		}
-
-		modules.sql.createTables(dapp.transactionId, blockchain, function (err) {
-			if (err) {
-				return setImmediate(cb, err);
+			try {
+				blockchain = require(path.join(dappPath, 'blockchain.json'));
+			} catch (e) {
+				return setImmediate(cb, 'Failed to open blockchain.json file');
 			}
 
+			modules.sql.createTables(dapp.transactionId, blockchain, function (err) {
+				if (err) {
+					return setImmediate(cb, err);
+				}
+				runSandbox();
+			});
+		} else {
+			runSandbox();
+		}
+
+		function runSandbox(){
 			var withDebug = false;
 			process.execArgv.forEach(function (item, index) {
 				if (item.indexOf('--debug') >= 0) {
@@ -843,12 +851,31 @@ __private.createSandbox = function (dapp, params, cb) {
 			});
 
 			sandbox.on('error', function (err) {
+				var lastError = __private.lastError;
+				__private.lastError = Date.now();
 				library.logger.error(['Encountered error in application', dapp.transactionId].join(' '), err);
+
 				__private.stopDApp(dapp, function (err) {
 					if (err) {
 						library.logger.error('Failed to stop application', dapp.transactionId);
 					} else {
 						library.logger.info(['Application', dapp.transactionId, 'closed'].join(' '));
+
+						var delay = 30000;
+						if (lastError == null || (Date.now() - lastError) > delay) {
+							delay = 1000;
+						} else {
+							library.logger.warn('Delaying application restart by 30 seconds...');
+						}
+						setTimeout(function() {
+							__private.launchDApp(dapp.relaunchBody, function (err) {
+								if (err) {
+									library.logger.error('Failed to restart application', dapp.transactionId);
+								} else {
+									library.logger.info(['Application', dapp.transactionId, 'restarted'].join(' '));
+								}
+							});
+						}, delay);	
 					}
 				});
 			});
@@ -856,7 +883,7 @@ __private.createSandbox = function (dapp, params, cb) {
 			sandbox.run();
 
 			return setImmediate(cb);
-		});
+		}
 	});
 };
 
@@ -890,6 +917,11 @@ __private.stopDApp = function (dapp, cb) {
 			}
 
 			delete __private.sandboxes[dapp.transactionId];
+
+			// Make restart attempt possible
+			delete __private.dappready[dapp.transactionId];
+			delete __private.launched[dapp.transactionId]; 
+
 			return setImmediate(seriesCb);
 		},
 		deleteRoutes: function (seriesCb) {
@@ -957,12 +989,12 @@ DApps.prototype.request = function (dappid, method, path, query, cb) {
  */
 DApps.prototype.onBind = function (scope) {
 	modules = {
-		blocks: scope.blocks.shared,				 
+		blocks: scope.blocks.shared,
 		transactions: scope.transactions,
 		accounts: scope.accounts,
 		peers: scope.peers,
 		sql: scope.sql,
-		multisignatures: scope.multisignatures, 
+		multisignatures: scope.multisignatures,
 		transport: scope.transport,
 		dapps: scope.dapps
 	};
