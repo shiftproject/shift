@@ -321,7 +321,7 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 			// Check transaction depends on type
 			if (library.logic.transaction.ready(transaction, sender)) {
 				// Verify transaction
-				library.logic.transaction.verify(transaction, sender, null, function (err) {
+				library.logic.transaction.verify(transaction, sender, null, true, function (err) {
 					ready.push(transaction);
 					return setImmediate(cb);
 				});

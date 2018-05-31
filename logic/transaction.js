@@ -417,17 +417,18 @@ Transaction.prototype.process = function (trs, sender, requester, cb) {
  * @param {transaction} trs
  * @param {account} sender
  * @param {account} requester
+ * @param {boolean} checkExists - Check if transaction already exists in database 
  * @param {function} cb
  * @return {setImmediateCallback} validation errors | trs
  */
 // it seems there is no call with param 'requester'
-Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) {
+Transaction.prototype.verify = function (trs, sender, height, requester, checkExists, cb) {
 	var valid = false;
 	var err = null;
 
-//	if (typeof requester === 'function') {
-//		cb = requester;
-//	}
+	if (requester === undefined || requester === null) {
+		requester = {};
+	}
 
 	// Check sender
 	if (!sender) {
@@ -605,10 +606,11 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 	__private.types[trs.type].verify.call(this, trs, sender, function (err) {
 		if (err) {
 			return setImmediate(cb, err);
-		} else {
+		} else if (checkExists) {
 			// Check for already confirmed transaction
 			return self.checkConfirmed(trs, cb);
 		}
+		return setImmediate(cb);
 	});
 };
 
