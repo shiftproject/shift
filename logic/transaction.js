@@ -439,7 +439,7 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 	if (requester === undefined || requester === null) {
 		requester = {};
 	}
-	if (requester === undefined || requester === null) {
+	if (checkExists === undefined || checkExists === null) {
 		checkExists = true;
 	}
 
