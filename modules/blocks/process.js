@@ -211,89 +211,86 @@ Process.prototype.loadBlocksOffset = function (limit, offset, verify, cb) {
  * @return {Object}   cb.lastValidBlock Normalized new last block
  */
 Process.prototype.loadBlocksFromPeer = function (peer, cb) {
-	// Execute in sequence via sequence
-	library.sequence.add(function (cb) {
-		// Set current last block as last valid block
-		var lastValidBlock = modules.blocks.lastBlock.get();
+	// Set current last block as last valid block
+	var lastValidBlock = modules.blocks.lastBlock.get();
 
-		// Normalize peer
-		peer = library.logic.peers.create(peer);
-		library.logger.info('Loading blocks from: ' + peer.string);
+	// Normalize peer
+	peer = library.logic.peers.create(peer);
+	library.logger.info('Loading blocks from: ' + peer.string);
 
-		function getFromPeer (seriesCb) {
-			// Ask remote peer for blocks
-			modules.transport.getFromPeer(peer, {
-				method: 'GET',
-				api: '/blocks?lastBlockId=' + lastValidBlock.id
-			}, function (err, res) {
-				err = err || res.body.error;
-				if (err) {
-					return setImmediate(seriesCb, err);
-				} else {
-					return setImmediate(seriesCb, null, res.body.blocks);
-				}
-			});
-		}
-
-		// Validate remote peer response via schema
-		function validateBlocks (blocks, seriesCb) {
-			var report = library.schema.validate(blocks, schema.loadBlocksFromPeer);
-
-			if (!report) {
-				return setImmediate(seriesCb, 'Received invalid blocks data');
-			} else {
-				return setImmediate(seriesCb, null, blocks);
-			}
-		}
-
-		// Process all received blocks
-		function processBlocks (blocks, seriesCb) {
-			// Skip if ther is no blocks
-			if (blocks.length === 0) {
-				return setImmediate(seriesCb);
-			}
-			// Iterate over received blocks, normalize block first...
-			async.eachSeries(modules.blocks.utils.readDbRows(blocks), function (block, eachSeriesCb) {
-				if (modules.blocks.isCleaning.get()) {
-					// Cancel processing if node shutdown was requested
-					return setImmediate(eachSeriesCb);
-				} else {
-					// ...then process block
-					return processBlock(block, eachSeriesCb);
-				}
-			}, function (err) {
-				return setImmediate(seriesCb, err);
-			});
-		}
-
-		// Process single block
-		function processBlock (block, seriesCb) {
-			// Start block processing - broadcast: false, saveBlock: true, validateSlot: true
-			modules.blocks.verify.processBlock(block, false, true, true, function (err) {
-				if (!err) {
-					// Update last valid block
-					lastValidBlock = block;
-					library.logger.info(['Block', block.id, 'loaded from:', peer.string].join(' '), 'height: ' + block.height);
-				} else {
-					var id = (block ? block.id : 'null');
-
-					library.logger.debug('Block processing failed', {id: id, err: err.toString(), module: 'blocks', block: block});
-				}
-				return seriesCb(err);
-			});
-		}
-
-		async.waterfall([
-			getFromPeer,
-			validateBlocks,
-			processBlocks
-		], function (err) {
+	function getFromPeer (seriesCb) {
+		// Ask remote peer for blocks
+		modules.transport.getFromPeer(peer, {
+			method: 'GET',
+			api: '/blocks?lastBlockId=' + lastValidBlock.id
+		}, function (err, res) {
+			err = err || res.body.error;
 			if (err) {
-				return setImmediate(cb, 'Error loading blocks: ' + (err.message || err), lastValidBlock);
+				return setImmediate(seriesCb, err);
 			} else {
-				return setImmediate(cb, null, lastValidBlock);
+				return setImmediate(seriesCb, null, res.body.blocks);
 			}
 		});
+	}
+
+	// Validate remote peer response via schema
+	function validateBlocks (blocks, seriesCb) {
+		var report = library.schema.validate(blocks, schema.loadBlocksFromPeer);
+
+		if (!report) {
+			return setImmediate(seriesCb, 'Received invalid blocks data');
+		} else {
+			return setImmediate(seriesCb, null, blocks);
+		}
+	}
+
+	// Process all received blocks
+	function processBlocks (blocks, seriesCb) {
+		// Skip if ther is no blocks
+		if (blocks.length === 0) {
+			return setImmediate(seriesCb);
+		}
+		// Iterate over received blocks, normalize block first...
+		async.eachSeries(modules.blocks.utils.readDbRows(blocks), function (block, eachSeriesCb) {
+			if (modules.blocks.isCleaning.get()) {
+				// Cancel processing if node shutdown was requested
+				return setImmediate(eachSeriesCb);
+			} else {
+				// ...then process block
+				return processBlock(block, eachSeriesCb);
+			}
+		}, function (err) {
+			return setImmediate(seriesCb, err);
+		});
+	}
+
+	// Process single block
+	function processBlock (block, seriesCb) {
+		// Start block processing - broadcast: false, saveBlock: true, validateSlot: true
+		modules.blocks.verify.processBlock(block, false, true, true, function (err) {
+			if (!err) {
+				// Update last valid block
+				lastValidBlock = block;
+				library.logger.info(['Block', block.id, 'loaded from:', peer.string].join(' '), 'height: ' + block.height);
+			} else {
+				var id = (block ? block.id : 'null');
+
+				library.logger.debug('Block processing failed', {id: id, err: err.toString(), module: 'blocks', block: block});
+			}
+			return seriesCb(err);
+		});
+	}
+
+	async.waterfall([
+		getFromPeer,
+		validateBlocks,
+		processBlocks
+	], function (err) {
+		if (err) {
+			return setImmediate(cb, 'Error loading blocks: ' + (err.message || err), lastValidBlock);
+		} else {
+			return setImmediate(cb, null, lastValidBlock);
+		}
 	});
 };
 
