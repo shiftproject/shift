@@ -328,8 +328,8 @@ __private.applyTransaction = function (block, transaction, sender, cb) {
  * @emits  SIGTERM
  * @param  {Object}   block Full normalized block
  * @param  {boolean}  broadcast Indicator that block needs to be broadcasted
- * @param  {Function} cb Callback function
  * @param  {boolean}  saveBlock Indicator that block needs to be saved to database
+ * @param  {Function} cb Callback function
  * @return {Function} cb Callback function from params (through setImmediate)
  * @return {Object}   cb.err Error if occurred
  */
@@ -586,7 +586,7 @@ Chain.prototype.deleteLastBlock = function (cb) {
 
 	async.waterfall(
 		[
-			function (waterCb) {
+			function popLastBlock (waterCb) {
 				// Delete last block, replace last block with previous block, undo things
 				__private.popLastBlock(lastBlock, function (err, newLastBlock) {
 					if (err) {
@@ -598,16 +598,22 @@ Chain.prototype.deleteLastBlock = function (cb) {
 					return setImmediate(waterCb, err, newLastBlock);
 				});
 			},
-			function (newLastBlock, waterCb) {
-				modules.transactions.receiveTransactions(lastBlock.transactions.reverse(), false, function (err) {
-						if (err) {
-							library.logger.error('Error receiving transactions after deleting block', err);
-						}
-						return setImmediate(waterCb, null, newLastBlock);
+			function receiveTransactionsFromDeletedBlock (newLastBlock, waterCb) {
+				library.balancesSequence.add(function (balanceSequenceCb) {
+					modules.transactions.receiveTransactions(
+						lastBlock.transactions.reverse(),
+						false,
+						balanceSequenceCb
+					);
+				}, function (err) {
+					if (err) {
+						library.logger.error('Error receiving transactions after deleting block', err);
 					}
-				);
+					return setImmediate(waterCb, null, newLastBlock);
+				});
 			}
-		], cb
+		],
+		cb
 	);
 };
 
