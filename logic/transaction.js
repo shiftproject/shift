@@ -361,6 +361,7 @@ Transaction.prototype.checkBalance = function (amount, balance, trs, sender) {
  * @return {setImmediateCallback} validation errors | trs
  */
 Transaction.prototype.process = function (trs, sender, requester, cb) {
+	// Catch incorrect parameter usage
 	if (typeof requester === 'function') {
 		cb = requester;
 	}
@@ -426,8 +427,20 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 	var valid = false;
 	var err = null;
 
+	// Catch incorrect parameter usage
+	if (typeof requester === 'function') {
+		cb = requester;
+	}
+	if (typeof checkExists === 'function') {
+		cb = checkExists;
+	}
+
+	// Set default value of param if not provided
 	if (requester === undefined || requester === null) {
 		requester = {};
+	}
+	if (requester === undefined || requester === null) {
+		checkExists = true;
 	}
 
 	// Check sender
