@@ -333,15 +333,12 @@ __private.applyTransaction = function (block, transaction, sender, cb) {
  * @return {Function} cb Callback function from params (through setImmediate)
  * @return {Object}   cb.err Error if occurred
  */
-Chain.prototype.applyBlock = function (block, broadcast, cb, saveBlock) {
+Chain.prototype.applyBlock = function (block, broadcast, saveBlock, cb) {
 	// Prevent shutdown during database writes.
 	modules.blocks.isActive.set(true);
 
 	// Transactions to rewind in case of error.
 	var appliedTransactions = {};
-
-	// List of unconfirmed transactions ids.
-	var unconfirmedTransactionIds;
 
 	async.series({
 		// Rewind any unconfirmed transactions before applying block.
@@ -355,7 +352,6 @@ Chain.prototype.applyBlock = function (block, broadcast, cb, saveBlock) {
 
 					return process.exit(0);
 				} else {
-					unconfirmedTransactionIds = ids;
 					return setImmediate(seriesCb);
 				}
 			});
@@ -376,12 +372,6 @@ Chain.prototype.applyBlock = function (block, broadcast, cb, saveBlock) {
 
 						appliedTransactions[transaction.id] = transaction;
 
-						// Remove the transaction from the node queue, if it was present.
-						var index = unconfirmedTransactionIds.indexOf(transaction.id);
-						if (index >= 0) {
-							unconfirmedTransactionIds.splice(index, 1);
-						}
-
 						return setImmediate(eachSeriesCb);
 					});
 				});
@@ -390,10 +380,10 @@ Chain.prototype.applyBlock = function (block, broadcast, cb, saveBlock) {
 					// Rewind any already applied unconfirmed transactions.
 					// Leaves the database state as per the previous block.
 					async.eachSeries(block.transactions, function (transaction, eachSeriesCb) {
-						modules.accounts.getAccount({publicKey: transaction.senderPublicKey}, function (err, sender) {
-							if (err) {
-								return setImmediate(eachSeriesCb, err);
-							}
+						modules.accounts.getAccount({publicKey: transaction.senderPublicKey}, function (accountError, sender) {
+							if (accountError) {
+								return setImmediate(eachSeriesCb, accountError);
+ 							}
 							// The transaction has been applied?
 							if (appliedTransactions[transaction.id]) {
 								// DATABASE: write
@@ -402,7 +392,13 @@ Chain.prototype.applyBlock = function (block, broadcast, cb, saveBlock) {
 								return setImmediate(eachSeriesCb);
 							}
 						});
-					}, function (err) {
+					}, function (seriesError) {
+						if (seriesError) {
+							// Fatal error, memory tables will be inconsistent
+							library.logger.error('Failed to undo unconfirmed block transactions list', seriesError);
+
+							return process.exit(0);
+						}
 						return setImmediate(seriesCb, err);
 					});
 				} else {
@@ -417,7 +413,7 @@ Chain.prototype.applyBlock = function (block, broadcast, cb, saveBlock) {
 				modules.accounts.getAccount({publicKey: transaction.senderPublicKey}, function (err, sender) {
 					if (err) {
 						// Fatal error, memory tables will be inconsistent
-						err = ['Failed to apply transaction:', transaction.id, '-', err].join(' ');
+						err = ['Account Error, Failed to apply transaction:', transaction.id, '-', err].join(' ');
 						library.logger.error(err);
 						library.logger.error('Transaction', transaction);
 
@@ -427,7 +423,7 @@ Chain.prototype.applyBlock = function (block, broadcast, cb, saveBlock) {
 					modules.transactions.apply(transaction, block, sender, function (err) {
 						if (err) {
 							// Fatal error, memory tables will be inconsistent
-							err = ['Failed to apply transaction:', transaction.id, '-', err].join(' ');
+							err = ['Transaction error, Failed to apply transaction:', transaction.id, '-', err].join(' ');
 							library.logger.error(err);
 							library.logger.error('Transaction', transaction);
 
@@ -469,22 +465,14 @@ Chain.prototype.applyBlock = function (block, broadcast, cb, saveBlock) {
 				// DATABASE write. Update delegates accounts
 				modules.rounds.tick(block, seriesCb);
 			}
-		},
-		// Push back unconfirmed transactions list (minus the one that were on the block if applied correctly).
-		// TODO: See undoUnconfirmedList discussion above.
-		applyUnconfirmedIds: function (seriesCb) {
-			// DATABASE write
-			modules.transactions.applyUnconfirmedIds(unconfirmedTransactionIds, function (err) {
-				return setImmediate(seriesCb, err);
-			});
-		},
+		}
 	}, function (err) {
 		// Allow shutdown, database writes are finished.
 		modules.blocks.isActive.set(false);
 
 		// Nullify large objects.
 		// Prevents memory leak during synchronisation.
-		appliedTransactions = unconfirmedTransactionIds = block = null;
+		appliedTransactions = block = null;
 
 		// Finish here if snapshotting.
 		// FIXME: Not the best place to do that
@@ -596,16 +584,31 @@ Chain.prototype.deleteLastBlock = function (cb) {
 		return setImmediate(cb, 'Cannot delete genesis block');
 	}
 
-	// Delete last block, replace last block with previous block, undo things
-	__private.popLastBlock(lastBlock, function (err, newLastBlock) {
-		if (err) {
-			library.logger.error('Error deleting last block', lastBlock);
-		} else {
-			// Replace last block with previous
-			lastBlock = modules.blocks.lastBlock.set(newLastBlock);
-		}
-		return setImmediate(cb, err, lastBlock);
-	});
+	async.waterfall(
+		[
+			function (waterCb) {
+				// Delete last block, replace last block with previous block, undo things
+				__private.popLastBlock(lastBlock, function (err, newLastBlock) {
+					if (err) {
+						library.logger.error('Error deleting last block', lastBlock);
+					} else {
+						// Replace last block with previous
+						modules.blocks.lastBlock.set(newLastBlock);
+					}
+					return setImmediate(waterCb, err, newLastBlock);
+				});
+			},
+			function (newLastBlock, waterCb) {
+				modules.transactions.receiveTransactions(lastBlock.transactions.reverse(), false, function (err) {
+						if (err) {
+							library.logger.error('Error receiving transactions after deleting block', err);
+						}
+						return setImmediate(waterCb, null, newLastBlock);
+					}
+				);
+			}
+		], cb
+	);
 };
 
 /**
