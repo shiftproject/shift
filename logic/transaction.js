@@ -361,11 +361,12 @@ Transaction.prototype.checkBalance = function (amount, balance, trs, sender) {
  * @return {setImmediateCallback} validation errors | trs
  */
 Transaction.prototype.process = function (trs, sender, requester, cb) {
-/*	// Catch incorrect parameter usage
+	// Catch incorrect parameter usage
 	if (typeof requester === 'function') {
 		cb = requester;
+		requester = {};
 	}
-*/
+
 	// Check transaction type
 	if (!__private.types[trs.type]) {
 		return setImmediate(cb, 'Unknown transaction type ' + trs.type);
@@ -427,14 +428,16 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 	var valid = false;
 	var err = null;
 
-/*	// Catch incorrect parameter usage
+	// Catch incorrect parameter usage
 	if (typeof requester === 'function') {
 		cb = requester;
+		requester = {};
 	}
 	if (typeof checkExists === 'function') {
 		cb = checkExists;
-	}
-*/
+		checkExists = true;
+	}	
+
 	// Set default value of param if not provided
 	if (requester === undefined || requester === null) {
 		requester = {};
@@ -831,11 +834,12 @@ Transaction.prototype.undo = function (trs, block, sender, cb) {
  * @return {setImmediateCallback} for errors | cb
  */
 Transaction.prototype.applyUnconfirmed = function (trs, sender, requester, cb) {
-/*	// Catch incorrect parameter usage
+	// Catch incorrect parameter usage
 	if (typeof requester === 'function') {
 		cb = requester;
+		requester = {};
 	}
-*/
+
 	// Check unconfirmed sender balance
 	var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString());
 	var senderBalance = this.checkBalance(amount, 'u_balance', trs, sender);

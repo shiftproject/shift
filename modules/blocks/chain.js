@@ -297,7 +297,7 @@ Chain.prototype.applyGenesisBlock = function (block, cb) {
  */
 __private.applyTransaction = function (block, transaction, sender, cb) {
 	// FIXME: Not sure about flow here, when nodes have different transactions - 'applyUnconfirmed' can fail but 'apply' can be ok
-	modules.transactions.applyUnconfirmed(transaction, sender, null, function (err) {
+	modules.transactions.applyUnconfirmed(transaction, sender, function (err) {
 		if (err) {
 			return setImmediate(cb, {
 				message: err,
@@ -362,7 +362,7 @@ Chain.prototype.applyBlock = function (block, broadcast, saveBlock, cb) {
 				// DATABASE write
 				modules.accounts.setAccountAndGet({publicKey: transaction.senderPublicKey}, function (err, sender) {
 					// DATABASE: write
-					modules.transactions.applyUnconfirmed(transaction, sender, null, function (err) {
+					modules.transactions.applyUnconfirmed(transaction, sender, function (err) {
 						if (err) {
 							err = ['Failed to apply transaction:', transaction.id, '-', err].join(' ');
 							library.logger.error(err);
