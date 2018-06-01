@@ -518,7 +518,7 @@ Transactions.prototype.applyUnconfirmed = function (transaction, sender, cb) {
 				library.logic.transaction.applyUnconfirmed(transaction, sender, requester, cb);
 			});
 		} else {
-			library.logic.transaction.applyUnconfirmed(transaction, sender, cb);
+			library.logic.transaction.applyUnconfirmed(transaction, sender, null, cb);
 		}
 	}
 };

@@ -774,7 +774,7 @@ __private.applyUnconfirmedList = function (transactions, cb) {
 					self.removeUnconfirmedTransaction(transaction.id);
 					return setImmediate(eachSeriesCb);
 				}
-				modules.transactions.applyUnconfirmed(transaction, sender, function (err) {
+				modules.transactions.applyUnconfirmed(transaction, sender, null, function (err) {
 					if (err) {
 						library.logger.error('Failed to apply unconfirmed transaction: ' + transaction.id, err);
 						self.removeUnconfirmedTransaction(transaction.id);

@@ -425,7 +425,7 @@ describe('transaction', function () {
 		});
 
 		it('should return error sender is not supplied', function (done) {
-			transaction.process(validTransaction, null, function (err, res) {
+			transaction.process(validTransaction, null, null, function (err, res) {
 				expect(err).to.be.equal('Missing sender');
 				done();
 			});
@@ -434,7 +434,7 @@ describe('transaction', function () {
 		it('should return error if generated id is different from id supplied of trs', function (done) {
 			var trs = _.cloneDeep(validTransaction);
 			trs.id = 'invalid trs id';
-			transaction.process(trs, validSender, function (err, res) {
+			transaction.process(trs, validSender, null, function (err, res) {
 				expect(err).to.equal('Invalid transaction id');
 				done();
 			});
@@ -444,14 +444,14 @@ describe('transaction', function () {
 			var trs = {
 				type: 0
 			};
-			transaction.process(trs, validSender, function (err, res) {
+			transaction.process(trs, validSender, null, function (err, res) {
 				expect(err).to.equal('Failed to get transaction id');
 				done();
 			});
 		});
 
 		it('should process the transaction', function (done) {
-			transaction.process(validTransaction, validSender, function (err, res) {
+			transaction.process(validTransaction, validSender, null, function (err, res) {
 				expect(err).to.not.be.ok;
 				expect(res).to.be.an('object');
 				expect(res.senderId).to.be.a('string').which.is.equal(validSender.address);
@@ -464,7 +464,7 @@ describe('transaction', function () {
 
 		function createAndProcess (trsData, sender, cb) {
 			var trs = transaction.create(trsData);
-			transaction.process(trs, sender, function (err, __trs) {
+			transaction.process(trs, sender, null, function (err, __trs) {
 				expect(err).to.not.exist;
 				expect(__trs).to.be.an('object');
 				cb(__trs);
@@ -901,21 +901,21 @@ describe('transaction', function () {
 
 		it('should be okay with valid params', function (done) {
 			var trs = validTransaction;
-			transaction.applyUnconfirmed(trs, validSender, done);
+			transaction.applyUnconfirmed(trs, validSender, null, done);
 		});
 
 		it('should return error on if balance is low', function (done) {
 			var trs = _.cloneDeep(validTransaction);
 			trs.amount = '9850458911801908';
 
-			transaction.applyUnconfirmed(trs, validSender, function (err) {
+			transaction.applyUnconfirmed(trs, validSender, null, function (err) {
 				expect(err).to.include('Account does not have enough ');
 				done();
 			});
 		});
 
 		it('should okay for valid params', function (done) {
-			transaction.applyUnconfirmed(validTransaction, validSender, function (err) {
+			transaction.applyUnconfirmed(validTransaction, validSender, null, function (err) {
 				expect(err).to.not.exist;
 				undoUnconfirmedTransaction(validTransaction, validSender, done);
 			});
@@ -925,7 +925,7 @@ describe('transaction', function () {
 	describe('undoUnconfirmed', function () {
 
 		function applyUnconfirmedTransaction (trs, sender, done) {
-			transaction.applyUnconfirmed(trs, sender, done);
+			transaction.applyUnconfirmed(trs, sender, null, done);
 		}
 
 		it('should throw an error with no param', function () {

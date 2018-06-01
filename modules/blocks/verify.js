@@ -295,7 +295,7 @@ __private.verifyPayload = function (block, result) {
  * Verify block for fork cause one
  *
  * @private
- * @method verifyBlock
+ * @method verifyForkOne
  * @param  {Object}  block Target block
  * @param  {Object}  lastBlock Last block
  * @param  {Object}  result Verification results
@@ -316,7 +316,7 @@ __private.verifyForkOne = function (block, lastBlock, result) {
  * Verify block slot according to timestamp
  *
  * @private
- * @method verifyBlock
+ * @method verifyBlockSlot
  * @param  {Object}  block Target block
  * @param  {Object}  lastBlock Last block
  * @param  {Object}  result Verification results
