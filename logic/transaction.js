@@ -419,7 +419,7 @@ Transaction.prototype.process = function (trs, sender, requester, cb) {
  * @param {transaction} trs
  * @param {account} sender
  * @param {account} requester
- * @param {boolean} checkExists - Check if transaction already exists in database 
+ * @param {boolean} checkExists Check if transaction already exists in database
  * @param {function} cb
  * @return {setImmediateCallback} validation errors | trs
  */
@@ -1040,7 +1040,8 @@ Transaction.prototype.schema = {
 			type: 'integer'
 		},
 		timestamp: {
-			type: 'integer'
+			type: 'integer',
+			minimum: 0
 		},
 		senderPublicKey: {
 			type: 'string',

@@ -38,7 +38,7 @@ function Verify (logger, block, transaction, db) {
  * @method checkTransaction
  * @param  {Object}   block Block object
  * @param  {Object}   transaction Transaction object
- * @param  {boolean}  checkExists - Check if transaction already exists in database
+ * @param  {boolean}  checkExists Check if transaction already exists in database
  * @param  {Function} cb Callback function
  * @return {Function} cb Callback function from params (through setImmediate)
  * @return {Object}   cb.err Error if occurred

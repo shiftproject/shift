@@ -140,18 +140,17 @@ Process.prototype.getCommonBlock = function (peer, height, cb) {
  * @method loadBlocksOffset
  * @param  {number}   limit Limit amount of blocks
  * @param  {number}   offset Offset to start at
- * @param  {boolean}  verify Indicator that block needs to be verified
  * @param  {Function} cb Callback function
  * @return {Function} cb Callback function from params (through setImmediate)
  * @return {Object}   cb.err Error if occurred
  * @return {Object}   cb.lastBlock Current last block
  */
-Process.prototype.loadBlocksOffset = function (limit, offset, verify, cb) {
+Process.prototype.loadBlocksOffset = function (limit, offset, cb) {
 	// Calculate limit if offset is supplied
 	var newLimit = limit + (offset || 0);
 	var params = { limit: newLimit, offset: offset || 0 };
 
-	library.logger.debug('Loading blocks offset', {limit: limit, offset: offset, verify: verify});
+	library.logger.debug('Loading blocks offset', {limit: limit, offset: offset});
 	// Execute in sequence via dbSequence
 	library.dbSequence.add(function (cb) {
 		// Loads full blocks from database
@@ -167,24 +166,11 @@ Process.prototype.loadBlocksOffset = function (limit, offset, verify, cb) {
 				}
 
 				library.logger.debug('Processing block', block.id);
-				if (verify && block.id !== library.genesisblock.block.id) {
-					// Sanity check of the block, if values are coherent.
-					// No access to database.
-					var check = modules.blocks.verify.verifyBlock(block);
-
-					if (!check.verified) {
-						library.logger.error(['Block', block.id, 'verification failed'].join(' '), check.errors.join(', '));
-						// Return first error from checks
-						return setImmediate(cb, check.errors[0]);
-					}
-				}
 				if (block.id === library.genesisblock.block.id) {
 					modules.blocks.chain.applyGenesisBlock(block, cb);
 				} else {
-					// Apply block - broadcast: false, saveBlock: false
-					// FIXME: Looks like we are missing some validations here, because applyBlock is different than processBlock used elesewhere
-					// - that need to be checked and adjusted to be consistent
-					modules.blocks.chain.applyBlock(block, false, false, cb);
+					// Verify block - broadcast: false, saveBlock: false
+					modules.blocks.verify.processBlock(block, false, false, cb);
 				}
 				// Update last block
 				modules.blocks.lastBlock.set(block);

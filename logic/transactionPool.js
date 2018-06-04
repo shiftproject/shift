@@ -542,7 +542,7 @@ TransactionPool.prototype.applyUnconfirmedIds = function (ids, cb) {
 };
 
 /**
- * Undoes unconfirmed transactions.
+ * Undoes the unconfirmed queue, reverting the unconfirmed state of each transaction.
  * @implements {getUnconfirmedTransactionList}
  * @implements {modules.transactions.undoUnconfirmed}
  * @implements {removeUnconfirmedTransaction}
@@ -552,25 +552,33 @@ TransactionPool.prototype.applyUnconfirmedIds = function (ids, cb) {
 TransactionPool.prototype.undoUnconfirmedList = function (cb) {
 	var ids = [];
 
-	// Execute in sequence via balancesSequence
-	library.balancesSequence.add(function (cb) {
-		async.eachSeries(self.getUnconfirmedTransactionList(false), function (transaction, eachSeriesCb) {
-			if (transaction) {
-				ids.push(transaction.id);
-				modules.transactions.undoUnconfirmed(transaction, function (err) {
-					if (err) {
-						library.logger.error('Failed to undo unconfirmed transaction: ' + transaction.id, err);
-						self.removeUnconfirmedTransaction(transaction.id);
-					}
+	async.eachSeries(self.getUnconfirmedTransactionList(false), function (transaction, eachSeriesCb) {
+		if (transaction) {
+			ids.push(transaction.id);
+			modules.transactions.undoUnconfirmed(transaction, function (err) {
+				// Remove transaction from unconfirmed, queued and multisignature lists
+				self.removeUnconfirmedTransaction(transaction.id);
+
+				if (err) {
+					library.logger.error('Failed to undo unconfirmed transaction: ' + transaction.id, err);
 					return setImmediate(eachSeriesCb);
-				});
-			} else {
-				return setImmediate(eachSeriesCb);
-			}
-		}, function (err) {
-			return setImmediate(cb, err, ids);
-		});
-	}, cb);
+				}
+				// Transaction successfully undone from unconfirmed states, try move it to queued list
+				library.balancesSequence.add(function (balancesSequenceCb) {
+					self.processUnconfirmedTransaction(transaction, false, function (err) {
+						if (err) {
+							library.logger.debug('Failed to queue transaction back after successful undo unconfirmed: ' + transaction.id, err);
+						}
+						return setImmediate(balancesSequenceCb);
+					});
+				}, eachSeriesCb);
+			});
+		} else {
+			return setImmediate(eachSeriesCb);
+		}
+	}, function (err) {
+		return setImmediate(cb, err, ids);
+	});
 };
 
 /**
