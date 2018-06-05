@@ -361,8 +361,10 @@ Transaction.prototype.checkBalance = function (amount, balance, trs, sender) {
  * @return {setImmediateCallback} validation errors | trs
  */
 Transaction.prototype.process = function (trs, sender, requester, cb) {
+	// Catch incorrect parameter usage
 	if (typeof requester === 'function') {
 		cb = requester;
+		requester = {};
 	}
 
 	// Check transaction type
@@ -417,17 +419,32 @@ Transaction.prototype.process = function (trs, sender, requester, cb) {
  * @param {transaction} trs
  * @param {account} sender
  * @param {account} requester
+ * @param {boolean} checkExists Check if transaction already exists in database
  * @param {function} cb
  * @return {setImmediateCallback} validation errors | trs
  */
 // it seems there is no call with param 'requester'
-Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) {
+Transaction.prototype.verify = function (trs, sender, height, requester, checkExists, cb) {
 	var valid = false;
 	var err = null;
 
-//	if (typeof requester === 'function') {
-//		cb = requester;
-//	}
+	// Catch incorrect parameter usage
+	if (typeof requester === 'function') {
+		cb = requester;
+		requester = {};
+	}
+	if (typeof checkExists === 'function') {
+		cb = checkExists;
+		checkExists = true;
+	}	
+
+	// Set default value of param if not provided
+	if (requester === undefined || requester === null) {
+		requester = {};
+	}
+	if (checkExists === undefined || checkExists === null) {
+		checkExists = true;
+	}
 
 	// Check sender
 	if (!sender) {
@@ -605,10 +622,11 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 	__private.types[trs.type].verify.call(this, trs, sender, function (err) {
 		if (err) {
 			return setImmediate(cb, err);
-		} else {
+		} else if (checkExists) {
 			// Check for already confirmed transaction
 			return self.checkConfirmed(trs, cb);
 		}
+		return setImmediate(cb);
 	});
 };
 
@@ -816,8 +834,10 @@ Transaction.prototype.undo = function (trs, block, sender, cb) {
  * @return {setImmediateCallback} for errors | cb
  */
 Transaction.prototype.applyUnconfirmed = function (trs, sender, requester, cb) {
+	// Catch incorrect parameter usage
 	if (typeof requester === 'function') {
 		cb = requester;
+		requester = {};
 	}
 
 	// Check unconfirmed sender balance
@@ -1020,7 +1040,8 @@ Transaction.prototype.schema = {
 			type: 'integer'
 		},
 		timestamp: {
-			type: 'integer'
+			type: 'integer',
+			minimum: 0
 		},
 		senderPublicKey: {
 			type: 'string',

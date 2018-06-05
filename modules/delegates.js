@@ -93,6 +93,25 @@ __private.getKeysSortByVote = function (cb) {
 };
 
 /**
+ * Gets delegate public keys from previous round, sorted by vote descending.
+ * @private
+ * @param {function} cb - Callback function.
+ * @returns {setImmediateCallback} 
+ */
+__private.getDelegatesFromPreviousRound = function (cb) {
+	library.db.query(sql.getDelegatesSnapshot, {limit: slots.delegates}).then(function (rows) {
+		var delegatesPublicKeys = [];
+		rows.forEach(function (row) {
+			delegatesPublicKeys.push(row.publicKey.toString('hex'));
+		});
+		return setImmediate(cb, null, delegatesPublicKeys);
+	}).catch(function (err) {
+		library.logger.error(err.stack);
+		return setImmediate(cb, 'getDelegatesSnapshot database query failed');
+	});
+};
+
+/**
  * Gets slot time and keypair.
  * @private
  * @param {number} slot
@@ -499,6 +518,17 @@ Delegates.prototype.validateBlockSlot = function (block, cb) {
 			return setImmediate(cb, 'Failed to verify slot: ' + currentSlot);
 		}
 	});
+};
+
+/**
+ * Generates delegate list and checks if block generator public Key
+ * matches delegate id - against previous round.
+ * @param {block} block
+ * @param {function} cb - Callback function.
+ * @returns {setImmediateCallback} error message | cb
+ */
+Delegates.prototype.validateBlockSlotAgainstPreviousRound = function (block, cb) {
+	__private.validateBlockSlot(block, __private.getDelegatesFromPreviousRound, cb);
 };
 
 /**
