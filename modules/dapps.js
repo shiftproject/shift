@@ -823,7 +823,7 @@ __private.createSandbox = function (dapp, params, cb) {
 			return setImmediate(cb, err);
 		}
 
-		if (__private.lastError == null) {
+		if (__private.lastError == null && typeof dapp.relaunchBody === 'undefined') {
 			var blockchain;
 
 			try {
