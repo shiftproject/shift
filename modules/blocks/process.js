@@ -169,8 +169,8 @@ Process.prototype.loadBlocksOffset = function (limit, offset, cb) {
 				if (block.id === library.genesisblock.block.id) {
 					modules.blocks.chain.applyGenesisBlock(block, cb);
 				} else {
-					// Verify block - broadcast: false, saveBlock: false
-					modules.blocks.verify.processBlock(block, false, false, cb);
+					// Verify block - broadcast: false, saveBlock: false, validateSlot: true
+					modules.blocks.verify.processBlock(block, false, false, true, cb);
 				}
 				// Update last block
 				modules.blocks.lastBlock.set(block);
