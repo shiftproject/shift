@@ -539,7 +539,7 @@ Delegates.prototype.validateBlockSlotAgainstPreviousRound = function (block, cb)
  * @param {function} cb - Callback function.
  */
 Delegates.prototype.sandboxApi = function (call, args, cb) {
-	sandboxHelper.callMethod(shared, call, args, cb);
+	sandboxHelper.callMethod(this.shared, call, args, cb);
 };
 
 // Events

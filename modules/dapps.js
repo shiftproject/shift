@@ -1795,7 +1795,7 @@ shared.getCommonBlock = function (req, cb) {
 };
 
 shared.sendWithdrawal = function (req, cb) {
-	return __private.sendWithdrawal(req, cb);
+	return self.internal.sendWithdrawal(req, cb);	
 };
 
 shared.getWithdrawalLastTransaction = function (req, cb) {
