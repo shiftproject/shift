@@ -63,6 +63,15 @@ BlockReward.prototype.calcReward = function (height) {
 };
 
 /**
+ * @implements {BlockReward.calcSalary}
+ * @param {number} height
+ * @return {number}
+ */
+BlockReward.prototype.calcSalary = function (height) {
+	return this.rewards[this.calcMilestone(height)].salary;
+};
+
+/**
  * @implements {__private.parseHeight}
  * @implements {BlockReward.calcMilestone}
  * @param {number} height

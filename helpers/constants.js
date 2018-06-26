@@ -65,7 +65,7 @@ module.exports = {
 				secondsignature: 500000000,	// 5
 				delegate: 6000000000,	// 60
 				multisignature: 500000000, // 5
-				dapp: 2500000000	//25
+				dapp: 2500000000	// 25
 			}
 		},
 		{
@@ -76,7 +76,7 @@ module.exports = {
 				secondsignature: 10000000,	// 0.1
 				delegate: 6000000000,	// 60
 				multisignature: 50000000, // 0.5
-				dapp: 2500000000	//25
+				dapp: 2500000000	// 25
 			}
 		}
 	],
@@ -99,6 +99,12 @@ module.exports = {
 	],
 	numberLength: 100000000,
 	requestLength: 104,
+	teamAccounts: [
+		// Mainnet
+		'69844b687d92e831625e01e30c7b532a2d330a3727e0db2e59be3891cf0dc551',
+		// Testnet
+		'6d90dfdc4be3861b9fa3374a2d839bae6aa3aada3cc37de145cf29f44ab4cb99'
+	],	
 	rewards: [
 		{ height: 1,        reward: 0},
 		{ height: 10,       reward: 100000000},
