@@ -41,19 +41,20 @@
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
  */
 module.exports = {
-	currentVersion: '6.7.1',
+	currentVersion: '6.8.2',
 	minVersion: [
 		{ height: 1,      ver: '^6.1.0'},
 		{ height: 600000, ver: '^6.3.0'},
 		{ height: 828000, ver: '^6.5.1'},
-		{ height: 1015000, ver: '^6.6.2'}
+		{ height: 1015000, ver: '^6.6.2'},
+		{ height: 1996000, ver: '^6.8.0'}
 	],
 	activeDelegates: 101,
 	addressLength: 208,
 	blockHeaderLength: 248,
-	blockSlotWindow: 5, // window in which a slot could be accepted	
+	blockSlotWindow: 5, // window in which a slot could be accepted
 	blockTime: 27000,
-	blockReceiptTimeOut: 27*2, // 2 blocks
+	blockReceiptTimeOut: 27 * 2, // 2 blocks
 	confirmationLength: 77,
 	epochTime: new Date(Date.UTC(2016, 4, 24, 17, 0, 0, 0)),
 	fees: [
@@ -65,7 +66,7 @@ module.exports = {
 				secondsignature: 500000000,	// 5
 				delegate: 6000000000,	// 60
 				multisignature: 500000000, // 5
-				dapp: 2500000000	//25
+				dapp: 2500000000	// 25
 			}
 		},
 		{
@@ -76,7 +77,7 @@ module.exports = {
 				secondsignature: 10000000,	// 0.1
 				delegate: 6000000000,	// 60
 				multisignature: 50000000, // 0.5
-				dapp: 2500000000	//25
+				dapp: 2500000000	// 25
 			}
 		}
 	],
@@ -99,17 +100,23 @@ module.exports = {
 	],
 	numberLength: 100000000,
 	requestLength: 104,
+	teamAccounts: [
+		// Mainnet
+		'69844b687d92e831625e01e30c7b532a2d330a3727e0db2e59be3891cf0dc551',
+		// Testnet
+		'6d90dfdc4be3861b9fa3374a2d839bae6aa3aada3cc37de145cf29f44ab4cb99'
+	],	
 	rewards: [
-		{ height: 1,        reward: 0},
-		{ height: 10,       reward: 100000000},
-		{ height: 11,       reward: 30000000},
-		{ height: 12,       reward: 20000000},
-		{ height: 13,       reward: 100000000},
-		{ height: 828000,   reward: 110000000},
-		{ height: 1996000,  reward: 90000000},
-		{ height: 3164000,  reward: 70000000},
-		{ height: 4332000,  reward: 50000000},
-		{ height: 5500000,  reward: 30000000},
+		{ height: 1,        reward: 0,          salary: 0 },
+		{ height: 10,       reward: 100000000,  salary: 0 },
+		{ height: 11,       reward: 30000000,   salary: 0 },
+		{ height: 12,       reward: 20000000,   salary: 0 },
+		{ height: 13,       reward: 100000000,  salary: 0 },
+		{ height: 828000,   reward: 110000000,  salary: 0 },
+		{ height: 1996000,  reward: 90000000,   salary: 10000000 },
+		{ height: 3164000,  reward: 70000000,   salary: 8000000 },
+		{ height: 4332000,  reward: 50000000,   salary: 6000000 },
+		{ height: 5500000,  reward: 30000000,   salary: 4000000 }
 	],
 	signatureLength: 196,
 	totalAmount: 1009000000000000,

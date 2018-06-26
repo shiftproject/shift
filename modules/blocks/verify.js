@@ -38,11 +38,12 @@ function Verify (logger, block, transaction, db) {
  * @method checkTransaction
  * @param  {Object}   block Block object
  * @param  {Object}   transaction Transaction object
+ * @param  {boolean}  checkExists Check if transaction already exists in database
  * @param  {Function} cb Callback function
  * @return {Function} cb Callback function from params (through setImmediate)
  * @return {Object}   cb.err Error if occurred
  */
-__private.checkTransaction = function (block, transaction, cb) {
+__private.checkTransaction = function (block, transaction, checkExists, cb) {
 	async.waterfall([
 		function (waterCb) {
 			try {
@@ -57,24 +58,6 @@ __private.checkTransaction = function (block, transaction, cb) {
 			return setImmediate(waterCb);
 		},
 		function (waterCb) {
-			// Check if transaction is already in database, otherwise fork 2.
-			// DATABASE: read only
-			library.logic.transaction.checkConfirmed(transaction, function (err) {
-				if (err) {
-					// Fork: Transaction already confirmed.
-					modules.delegates.fork(block, 2);
-					// Undo the offending transaction.
-					// DATABASE: write
-					modules.transactions.undoUnconfirmed(transaction, function (err2) {
-						modules.transactions.removeUnconfirmedTransaction(transaction.id);
-						return setImmediate(waterCb, err2 || err);
-					});
-				} else {
-					return setImmediate(waterCb);
-				}
-			});
-		},
-		function (waterCb) {
 			// Get account from database if any (otherwise cold wallet).
 			// DATABASE: read only
 			modules.accounts.getAccount({publicKey: transaction.senderPublicKey}, waterCb);
@@ -82,10 +65,22 @@ __private.checkTransaction = function (block, transaction, cb) {
 		function (sender, waterCb) {
 			// Check if transaction id valid against database state (mem_* tables).
 			// DATABASE: read only
-			library.logic.transaction.verify(transaction, sender, block.height, waterCb);
+			library.logic.transaction.verify(transaction, sender, null, checkExists, waterCb);
 		}
 	], function (err) {
-		return setImmediate(cb, err);
+
+		if(err && err.match(/Transaction is already confirmed/)) {
+			// Fork: Transaction already confirmed.
+			modules.delegates.fork(block, 2);
+			// Undo the offending transaction.
+			// DATABASE: write
+			modules.transactions.undoUnconfirmed(transaction, function (err2) {
+				modules.transactions.removeUnconfirmedTransaction(transaction.id);
+				return setImmediate(cb, err2 || err);
+			});
+		} else {
+			return setImmediate(cb, err);
+		}
 	});
 };
 
@@ -93,8 +88,7 @@ __private.checkTransaction = function (block, transaction, cb) {
  * Set height according to the given last block
  *
  * @private
- * @method verifyBlock
- * @method verifyReceipt
+ * @method setHeight
  * @param  {Object}  block Target block
  * @param  {Object}  lastBlock Last block
  * @return {Object}  block Target block
@@ -109,8 +103,7 @@ __private.setHeight = function (block, lastBlock) {
  * Verify block signature
  *
  * @private
- * @method verifyBlock
- * @method verifyReceipt
+ * @method verifySignature
  * @param  {Object}  block Target block
  * @param  {Object}  result Verification results
  * @return {Object}  result Verification results
@@ -137,8 +130,7 @@ __private.verifySignature = function (block, result) {
  * Verify previous block
  *
  * @private
- * @method verifyBlock
- * @method verifyReceipt
+ * @method verifyPreviousBlock
  * @param  {Object}  block Target block
  * @param  {Object}  result Verification results
  * @return {Object}  result Verification results
@@ -154,11 +146,29 @@ __private.verifyPreviousBlock = function (block, result) {
 };
 
 /**
+ * Verify block is not one of the last {constants.blockSlotWindow} saved blocks
+ *
+ * @private
+ * @method verifyAgainstLastNBlockIds
+ * @param  {Object}  block Target block
+ * @param  {Object}  result Verification results
+ * @return {Object}  result Verification results
+ * @return {boolean} result.verified Indicator that verification passed
+ * @return {Array}   result.errors Array of validation errors
+ */
+__private.verifyAgainstLastNBlockIds = function (block, result) {
+	if (__private.lastNBlockIds.indexOf(block.id) !== -1) {
+		result.errors.push('Block already exists in chain');
+	};
+
+	return result;
+};
+
+/**
  * Verify block version
  *
  * @private
- * @method verifyBlock
- * @method verifyReceipt
+ * @method verifyVersion
  * @param  {Object}  block Target block
  * @param  {Object}  result Verification results
  * @return {Object}  result Verification results
@@ -177,8 +187,7 @@ __private.verifyVersion = function (block, result) {
  * Verify block reward
  *
  * @private
- * @method verifyBlock
- * @method verifyReceipt
+ * @method verifyReward
  * @param  {Object}  block Target block
  * @param  {Object}  result Verification results
  * @return {Object}  result Verification results
@@ -199,8 +208,7 @@ __private.verifyReward = function (block, result) {
  * Verify block id
  *
  * @private
- * @method verifyBlock
- * @method verifyReceipt
+ * @method verifyId
  * @param  {Object}  block Target block
  * @param  {Object}  result Verification results
  * @return {Object}  result Verification results
@@ -223,8 +231,7 @@ __private.verifyId = function (block, result) {
  * Verify block payload (transactions)
  *
  * @private
- * @method verifyBlock
- * @method verifyReceipt
+ * @method verifyPayload
  * @param  {Object}  block Target block
  * @param  {Object}  result Verification results
  * @return {Object}  result Verification results
@@ -288,7 +295,7 @@ __private.verifyPayload = function (block, result) {
  * Verify block for fork cause one
  *
  * @private
- * @method verifyBlock
+ * @method verifyForkOne
  * @param  {Object}  block Target block
  * @param  {Object}  lastBlock Last block
  * @param  {Object}  result Verification results
@@ -309,7 +316,7 @@ __private.verifyForkOne = function (block, lastBlock, result) {
  * Verify block slot according to timestamp
  *
  * @private
- * @method verifyBlock
+ * @method verifyBlockSlot
  * @param  {Object}  block Target block
  * @param  {Object}  lastBlock Last block
  * @param  {Object}  result Verification results
@@ -329,25 +336,6 @@ __private.verifyBlockSlot = function (block, lastBlock, result) {
 };
 
 /**
- * Verify block is not one of the last {constants.blockSlotWindow} saved blocks
- *
- * @private
- * @method verifyAgainstLastNBlockIds
- * @param  {Object}  block Target block
- * @param  {Object}  result Verification results
- * @return {Object}  result Verification results
- * @return {boolean} result.verified Indicator that verification passed
- * @return {Array}   result.errors Array of validation errors
- */
-__private.verifyAgainstLastNBlockIds = function (block, result) {
-  if (__private.lastNBlockIds.indexOf(block.id) !== -1) {
-    result.errors.push('Block already exists in chain');
-  };
-
-  return result;
-};
-
-/**
  * Verify block slot window according to application time
  *
  * @private
@@ -358,36 +346,20 @@ __private.verifyAgainstLastNBlockIds = function (block, result) {
  * @return {Array}   result.errors Array of validation errors
  */
 __private.verifyBlockSlotWindow = function (block, result) {
-  var currentApplicationSlot = slots.getSlotNumber();
-  var blockSlot = slots.getSlotNumber(block.timestamp);
+	var currentApplicationSlot = slots.getSlotNumber();
+	var blockSlot = slots.getSlotNumber(block.timestamp);
 
-  // Reject block if it's slot is older than constants.blockSlotWindow
-  if (currentApplicationSlot - blockSlot > constants.blockSlotWindow) {
-    result.errors.push('Block slot is too old');
-  }
+	// Reject block if it's slot is older than constants.blockSlotWindow
+	if (currentApplicationSlot - blockSlot > constants.blockSlotWindow) {
+		result.errors.push('Block slot is too old');
+	}
 
-  // Reject block if it's slot is in the future
-  if (currentApplicationSlot < blockSlot) {
-    result.errors.push('Block slot is in the future');
-  }
+	// Reject block if it's slot is in the future
+	if (currentApplicationSlot < blockSlot) {
+		result.errors.push('Block slot is in the future');
+	}
 
-  return result;
-};
-
-Verify.prototype.onBlockchainReady = function () {
-  return library.db.query(sql.loadLastNBlockIds, {limit: constants.blockSlotWindow}).then(function (blockIds) {
-    __private.lastNBlockIds = _.map(blockIds, 'id');
-  }).catch(function (err) {
-    library.logger.error('Unable to load last ' + constants.blockSlotWindow + ' block ids');
-    library.logger.error(err);
-  });
-};
-
-Verify.prototype.onNewBlock = function (block) {
-  __private.lastNBlockIds.push(block.id);
-  if (__private.lastNBlockIds.length > constants.blockSlotWindow) {
-    __private.lastNBlockIds.shift();
-  }
+	return result;
 };
 
 /**
@@ -403,7 +375,7 @@ Verify.prototype.onNewBlock = function (block) {
 Verify.prototype.verifyReceipt = function (block) {
 	var lastBlock = modules.blocks.lastBlock.get();
 
-	block = __private.setHeight(block, lastBlock);
+//	block = __private.setHeight(block, lastBlock);
 
 	var result = { verified: false, errors: [] };
 
@@ -420,6 +392,22 @@ Verify.prototype.verifyReceipt = function (block) {
 	result.errors.reverse();
 
 	return result;
+};
+
+Verify.prototype.onBlockchainReady = function () {
+	return library.db.query(sql.loadLastNBlockIds, {limit: constants.blockSlotWindow}).then(function (blockIds) {
+		__private.lastNBlockIds = _.map(blockIds, 'id');
+	}).catch(function (err) {
+		library.logger.error('Unable to load last ' + constants.blockSlotWindow + ' block ids');
+		library.logger.error(err);
+	});
+};
+
+Verify.prototype.onNewBlock = function (block) {
+	__private.lastNBlockIds.push(block.id);
+	if (__private.lastNBlockIds.length > constants.blockSlotWindow) {
+		__private.lastNBlockIds.shift();
+	}
 };
 
 /**
@@ -466,13 +454,13 @@ Verify.prototype.verifyBlock = function (block) {
  * @method processBlock
  * @param  {Object}   block Full block
  * @param  {boolean}  broadcast Indicator that block needs to be broadcasted
- * @param  {Function} cb Callback function
  * @param  {boolean}  saveBlock Indicator that block needs to be saved to database
- * @param  {boolean}  checked Indicator that block was previously checked
+ * @param  {boolean}  validateSlot Indicator that block needs slot validation
+ * @param  {Function} cb Callback function
  * @return {Function} cb Callback function from params (through setImmediate)
  * @return {Object}   cb.err Error if occurred
  */
-Verify.prototype.processBlock = function (block, broadcast, cb, saveBlock) {
+Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateSlot, cb) {
 	if (modules.blocks.isCleaning.get()) {
 		// Break processing if node shutdown reqested
 		return setImmediate(cb, 'Cleaning up');
@@ -507,6 +495,12 @@ Verify.prototype.processBlock = function (block, broadcast, cb, saveBlock) {
 			// Check if block id is already in the database (very low probability of hash collision)
 			// TODO: In case of hash-collision, to me it would be a special autofork...
 			// DATABASE: read only
+
+			// Skip checking for existing block id if we don't need to save that block
+			if (!saveBlock) {
+				return setImmediate(seriesCb);
+			}
+
 			library.db.query(sql.getBlockId, { id: block.id }).then(function (rows) {
 				if (rows.length > 0) {
 					return setImmediate(seriesCb, ['Block', block.id, 'already exists'].join(' '));
@@ -516,22 +510,27 @@ Verify.prototype.processBlock = function (block, broadcast, cb, saveBlock) {
 			});
 		},
 		validateBlockSlot: function (seriesCb) {
-			// Check if block was generated by the right active delagate. Otherwise, fork 3
-			// DATABASE: Read only to mem_accounts to extract active delegate list
-			modules.delegates.validateBlockSlot(block, function (err) {
-				if (err) {
-					// Fork: Delegate does not match calculated slot
-					modules.delegates.fork(block, 3);
-					return setImmediate(seriesCb, err);
-				} else {
-					return setImmediate(seriesCb);
-				}
-			});
+			if (validateSlot) {
+				// Check if block was generated by the right active delegate. Otherwise, fork 3
+				// DATABASE: Read only to mem_accounts to extract active delegate list
+				modules.delegates.validateBlockSlot(block, function (err) {
+					if (err) {
+						// Fork: Delegate does not match calculated slot
+						modules.delegates.fork(block, 3);
+						return setImmediate(seriesCb, err);
+					} else {
+						return setImmediate(seriesCb);
+					}
+				});
+			} else {
+				return setImmediate(seriesCb);
+			}
 		},
 		checkTransactions: function (seriesCb) {
 			// Check against the mem_* tables that we can perform the transactions included in the block
 			async.eachSeries(block.transactions, function (transaction, eachSeriesCb) {
-				__private.checkTransaction(block, transaction, eachSeriesCb);
+				// Verify transaction, check for transaction exists in database is performed only when saving block
+				__private.checkTransaction(block, transaction, saveBlock, eachSeriesCb);
 			}, function (err) {
 				return setImmediate(seriesCb, err);
 			});
@@ -544,7 +543,7 @@ Verify.prototype.processBlock = function (block, broadcast, cb, saveBlock) {
 			// * Block and transactions have valid values (signatures, block slots, etc...)
 			// * The check against database state passed (for instance sender has enough LSK, votes are under 101, etc...)
 			// We thus update the database with the transactions values, save the block and tick it
-			modules.blocks.chain.applyBlock(block, broadcast, cb, saveBlock);
+			modules.blocks.chain.applyBlock(block, broadcast, saveBlock, cb);
 		}
 	});
 };

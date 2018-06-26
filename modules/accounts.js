@@ -226,7 +226,7 @@ Accounts.prototype.mergeAccountAndGet = function (data, cb) {
  * @todo verified function and arguments.
  */
 Accounts.prototype.sandboxApi = function (call, args, cb) {
-	sandboxHelper.callMethod(shared, call, args, cb);
+	sandboxHelper.callMethod(this.shared, call, args, cb);
 };
 
 // Events

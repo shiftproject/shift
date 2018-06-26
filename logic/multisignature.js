@@ -22,14 +22,15 @@ __private.unconfirmedSignatures = {};
  * @param {Object} logger
  */
 // Constructor
-function Multisignature (schema, network, transaction, logger) {
+function Multisignature (schema, network, transaction, account, logger) {
 	library = {
 		schema: schema,
 		network: network,
 		logger: logger,
 		logic: {
 			transaction: transaction,
-		},
+			account: account
+		}
 	};
 }
 
@@ -103,7 +104,7 @@ Multisignature.prototype.verify = function (trs, sender, cb) {
 	}
 
 	if (trs.asset.multisignature.min > trs.asset.multisignature.keysgroup.length) {
-		var err = 'Invalid multisignature min. Must be less than keysgroup size';
+		var err = 'Invalid multisignature min. Must be less or equal to keysgroup size';
 		if (exceptions.multisignatures.indexOf(trs.id) > -1) {
 			this.scope.logger.debug(err);
 			this.scope.logger.debug(JSON.stringify(trs));

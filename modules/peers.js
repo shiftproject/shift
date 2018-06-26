@@ -287,7 +287,7 @@ __private.dbSave = function (cb) {
  * @param {function} cb - Callback function.
  */
 Peers.prototype.sandboxApi = function (call, args, cb) {
-	sandboxHelper.callMethod(Peers.prototype.shared, call, args, cb);
+	sandboxHelper.callMethod(this.shared, call, args, cb);
 };
 
 /**
@@ -445,7 +445,11 @@ Peers.prototype.list = function (options, cb) {
 			found = peersList.length;
 			// Apply filters
 			peersList = peersList.filter(function (peer) {
-				if (options.broadhash) {
+				if (options.dappid) {
+					// In case of a dapp lookup, skip peers that aren't running it 
+					return peer.dappid && peer.dappid.indexOf(options.dappid) !== -1;
+				}
+				if (options.broadhash) {			
 					// Skip banned and disconnected peers (state 0 and 1)
 					return options.allowedStates.indexOf(peer.state) !== -1 && (
 						// Matched broadhash when attempt 0

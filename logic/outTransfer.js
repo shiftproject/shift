@@ -22,7 +22,7 @@ function OutTransfer (db, schema, logger) {
 	library = {
 		db: db,
 		schema: schema,
-		logger: logger,
+		logger: logger
 	};
 }
 

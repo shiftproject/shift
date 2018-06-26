@@ -71,7 +71,7 @@ Rounds.prototype.calc = function (height) {
  * @param {number} round
  * @param {function} cb
  * @return {setImmediateCallback} error message | cb
- * 
+ *
  */
 Rounds.prototype.flush = function (round, cb) {
 	library.db.none(sql.flush, {round: round}).then(function () {
@@ -314,6 +314,7 @@ Rounds.prototype.onBind = function (scope) {
 		blocks: scope.blocks,
 		accounts: scope.accounts,
 		delegates: scope.delegates,
+		system: scope.system
 	};
 };
 

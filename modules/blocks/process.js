@@ -140,18 +140,17 @@ Process.prototype.getCommonBlock = function (peer, height, cb) {
  * @method loadBlocksOffset
  * @param  {number}   limit Limit amount of blocks
  * @param  {number}   offset Offset to start at
- * @param  {boolean}  verify Indicator that block needs to be verified
  * @param  {Function} cb Callback function
  * @return {Function} cb Callback function from params (through setImmediate)
  * @return {Object}   cb.err Error if occurred
  * @return {Object}   cb.lastBlock Current last block
  */
-Process.prototype.loadBlocksOffset = function (limit, offset, verify, cb) {
+Process.prototype.loadBlocksOffset = function (limit, offset, cb) {
 	// Calculate limit if offset is supplied
 	var newLimit = limit + (offset || 0);
 	var params = { limit: newLimit, offset: offset || 0 };
 
-	library.logger.debug('Loading blocks offset', {limit: limit, offset: offset, verify: verify});
+	library.logger.debug('Loading blocks offset', {limit: limit, offset: offset});
 	// Execute in sequence via dbSequence
 	library.dbSequence.add(function (cb) {
 		// Loads full blocks from database
@@ -167,24 +166,11 @@ Process.prototype.loadBlocksOffset = function (limit, offset, verify, cb) {
 				}
 
 				library.logger.debug('Processing block', block.id);
-				if (verify && block.id !== library.genesisblock.block.id) {
-					// Sanity check of the block, if values are coherent.
-					// No access to database.
-					var check = modules.blocks.verify.verifyBlock(block);
-
-					if (!check.verified) {
-						library.logger.error(['Block', block.id, 'verification failed'].join(' '), check.errors.join(', '));
-						// Return first error from checks
-						return setImmediate(cb, check.errors[0]);
-					}
-				}
 				if (block.id === library.genesisblock.block.id) {
 					modules.blocks.chain.applyGenesisBlock(block, cb);
 				} else {
-					// Apply block - broadcast: false, saveBlock: false
-					// FIXME: Looks like we are missing some validations here, because applyBlock is different than processBlock used elesewhere
-					// - that need to be checked and adjusted to be consistent
-					modules.blocks.chain.applyBlock(block, false, cb, false);
+					// Verify block - broadcast: false, saveBlock: false, validateSlot: true
+					modules.blocks.verify.processBlock(block, false, false, true, cb);
 				}
 				// Update last block
 				modules.blocks.lastBlock.set(block);
@@ -266,8 +252,8 @@ Process.prototype.loadBlocksFromPeer = function (peer, cb) {
 
 	// Process single block
 	function processBlock (block, seriesCb) {
-		// Start block processing - broadcast: false, saveBlock: true
-		modules.blocks.verify.processBlock(block, false, function (err) {
+		// Start block processing - broadcast: false, saveBlock: true, validateSlot: true
+		modules.blocks.verify.processBlock(block, false, true, true, function (err) {
 			if (!err) {
 				// Update last valid block
 				lastValidBlock = block;
@@ -278,7 +264,7 @@ Process.prototype.loadBlocksFromPeer = function (peer, cb) {
 				library.logger.debug('Block processing failed', {id: id, err: err.toString(), module: 'blocks', block: block});
 			}
 			return seriesCb(err);
-		}, true);
+		});
 	}
 
 	async.waterfall([
@@ -321,7 +307,7 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 			// Check transaction depends on type
 			if (library.logic.transaction.ready(transaction, sender)) {
 				// Verify transaction
-				library.logic.transaction.verify(transaction, sender, null, function (err) {
+				library.logic.transaction.verify(transaction, sender, null, true, function (err) {
 					ready.push(transaction);
 					return setImmediate(cb);
 				});
@@ -345,8 +331,8 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 			return setImmediate(cb, e);
 		}
 
-		// Start block processing - broadcast: true, saveBlock: true
-		modules.blocks.verify.processBlock(block, true, cb, true);
+		// Start block processing - broadcast: true, saveBlock: true, validateSlot: true
+		modules.blocks.verify.processBlock(block, true, true, true, cb);
 	});
 };
 
@@ -426,8 +412,38 @@ __private.receiveBlock = function (block, cb) {
 
 	// Update last receipt
 	modules.blocks.lastReceipt.update();
-	// Start block processing - broadcast: true, saveBlock: true
-	modules.blocks.verify.processBlock(block, true, cb, true);
+	// Start block processing - broadcast: true, saveBlock: true, validateSlot: false
+	modules.blocks.verify.processBlock(block, true, true, false, cb);
+};
+
+
+/**
+ * Validate Block Slot - Validates if block generator is valid delegate.
+ *
+ * @private
+ * @async
+ * @method validateBlockSlot
+ * @param {Object}   block Full normalized block
+ * @param {Object}   lastBlock Full normalized block
+ * @param {Function} cb Callback function
+ */
+__private.validateBlockSlot = function (block, lastBlock, cb) {
+	var roundNextBlock = modules.rounds.calc(block.height);
+	var roundLastBlock = modules.rounds.calc(lastBlock.height);
+
+	if (lastBlock.height % slots.delegates === 0 || roundLastBlock < roundNextBlock) {
+		// Check if block was generated by the right active delegate from previous round.
+		// DATABASE: Read only to mem_accounts to extract active delegate list
+		modules.delegates.validateBlockSlotAgainstPreviousRound(block, function (err) {
+			return setImmediate(cb, err);
+		});
+	} else {
+		// Check if block was generated by the right active delegate.
+		// DATABASE: Read only to mem_accounts to extract active delegate list
+		modules.delegates.validateBlockSlot(block, function (err) {
+			return setImmediate(cb, err);
+		});
+	}
 };
 
 /**
@@ -435,7 +451,7 @@ __private.receiveBlock = function (block, cb) {
  *
  * @private
  * @async
- * @method receiveBlock
+ * @method receiveForkOne
  * @param {Object}   block Received block
  * @param {Function} cb Callback function
  */
@@ -474,7 +490,7 @@ __private.receiveForkOne = function (block, lastBlock, cb) {
 			},
 			// Verify block slot window
 			function (seriesCb) {
-				modules.delegates.validateBlockSlot(tmp_block, seriesCb);
+				__private.validateBlockSlot(tmp_block, lastBlock, seriesCb);
 			},
 			// Delete last 2 blocks
 			modules.blocks.chain.deleteLastBlock,
@@ -493,7 +509,7 @@ __private.receiveForkOne = function (block, lastBlock, cb) {
  *
  * @private
  * @async
- * @method receiveBlock
+ * @method receiveForkFive
  * @param {Object}   block Received block
  * @param {Function} cb Callback function
  */

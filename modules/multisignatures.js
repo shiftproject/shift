@@ -37,7 +37,8 @@ function Multisignatures (cb, scope) {
 		balancesSequence: scope.balancesSequence,
 		logic: {
 			transaction: scope.logic.transaction,
-		},
+			account: scope.logic.account
+		}
 	};
 	genesisblock = library.genesisblock;
 	self = this;
@@ -48,6 +49,7 @@ function Multisignatures (cb, scope) {
 			scope.schema,
 			scope.network,
 			scope.logic.transaction,
+			scope.logic.account,
 			scope.logger
 		)
 	);
@@ -64,6 +66,9 @@ function Multisignatures (cb, scope) {
  * @todo test function!.
  */
 Multisignatures.prototype.processSignature = function (tx, cb) {
+	if (!tx) {
+		return setImmediate(cb, 'Unable to process signature. Signature is undefined.');
+	}
 	var transaction = modules.transactions.getMultisignatureTransaction(tx.transaction);
 
 	function done (cb) {
@@ -122,48 +127,48 @@ Multisignatures.prototype.processSignature = function (tx, cb) {
 		}
 
 		return done(cb);
-	} else {
-		modules.accounts.getAccount({
-			address: transaction.senderId
-		}, function (err, account) {
-			if (err) {
-				return setImmediate(cb, 'Multisignature account not found');
+	} 
+
+	modules.accounts.getAccount({
+		address: transaction.senderId
+	}, function (err, account) {
+		if (err) {
+			return setImmediate(cb, 'Multisignature account not found');
+		}
+
+		var verify = false;
+		var multisignatures = account.multisignatures;
+
+		if (transaction.requesterPublicKey) {
+			multisignatures.push(transaction.senderPublicKey);
+		}
+
+		if (!account) {
+			return setImmediate(cb, 'Account not found');
+		}
+
+		transaction.signatures = transaction.signatures || [];
+
+		if (transaction.signatures.indexOf(tx.signature) >= 0) {
+			return setImmediate(cb, 'Signature already exists');
+		}
+
+		try {
+			for (var i = 0; i < multisignatures.length && !verify; i++) {
+				verify = library.logic.transaction.verifySignature(transaction, multisignatures[i], tx.signature);
 			}
+		} catch (e) {
+			library.logger.error(e.stack);
+			return setImmediate(cb, 'Failed to verify signature');
+		}
 
-			var verify = false;
-			var multisignatures = account.multisignatures;
+		if (!verify) {
+			return setImmediate(cb, 'Failed to verify signature');
+		}
 
-			if (transaction.requesterPublicKey) {
-				multisignatures.push(transaction.senderPublicKey);
-			}
-
-			if (!account) {
-				return setImmediate(cb, 'Account not found');
-			}
-
-			transaction.signatures = transaction.signatures || [];
-
-			if (transaction.signatures.indexOf(tx.signature) >= 0) {
-				return setImmediate(cb, 'Signature already exists');
-			}
-
-			try {
-				for (var i = 0; i < multisignatures.length && !verify; i++) {
-					verify = library.logic.transaction.verifySignature(transaction, multisignatures[i], tx.signature);
-				}
-			} catch (e) {
-				library.logger.error(e.stack);
-				return setImmediate(cb, 'Failed to verify signature');
-			}
-
-			if (!verify) {
-				return setImmediate(cb, 'Failed to verify signature');
-			}
-
-			library.network.io.sockets.emit('multisignatures/signature/change', transaction);
-			return done(cb);
-		});
-	}
+		library.network.io.sockets.emit('multisignatures/signature/change', transaction);
+		return done(cb);
+	});
 };
 
 /**
@@ -174,7 +179,7 @@ Multisignatures.prototype.processSignature = function (tx, cb) {
  * @param {function} cb - Callback function.
  */
 Multisignatures.prototype.sandboxApi = function (call, args, cb) {
-	sandboxHelper.callMethod(shared, call, args, cb);
+	sandboxHelper.callMethod(this.shared, call, args, cb);
 };
 
 // Events
@@ -187,6 +192,7 @@ Multisignatures.prototype.onBind = function (scope) {
 	modules = {
 		transactions: scope.transactions,
 		accounts: scope.accounts,
+		multisignatures: scope.multisignatures
 	};
 
 	__private.assetTypes[transactionTypes.MULTI].bind(
