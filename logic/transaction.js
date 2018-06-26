@@ -361,8 +361,10 @@ Transaction.prototype.checkBalance = function (amount, balance, trs, sender) {
  * @return {setImmediateCallback} validation errors | trs
  */
 Transaction.prototype.process = function (trs, sender, requester, cb) {
+	// Catch incorrect parameter usage
 	if (typeof requester === 'function') {
 		cb = requester;
+		requester = {};
 	}
 
 	// Check transaction type
@@ -417,17 +419,32 @@ Transaction.prototype.process = function (trs, sender, requester, cb) {
  * @param {transaction} trs
  * @param {account} sender
  * @param {account} requester
+ * @param {boolean} checkExists Check if transaction already exists in database
  * @param {function} cb
  * @return {setImmediateCallback} validation errors | trs
  */
 // it seems there is no call with param 'requester'
-Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) {
+Transaction.prototype.verify = function (trs, sender, height, requester, checkExists, cb) {
 	var valid = false;
 	var err = null;
 
-//	if (typeof requester === 'function') {
-//		cb = requester;
-//	}
+	// Catch incorrect parameter usage
+	if (typeof requester === 'function') {
+		cb = requester;
+		requester = {};
+	}
+	if (typeof checkExists === 'function') {
+		cb = checkExists;
+		checkExists = true;
+	}	
+
+	// Set default value of param if not provided
+	if (requester === undefined || requester === null) {
+		requester = {};
+	}
+	if (checkExists === undefined || checkExists === null) {
+		checkExists = true;
+	}
 
 	// Check sender
 	if (!sender) {
@@ -450,14 +467,14 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 	}
 
 	// Check for missing requester second signature
-//	if (trs.requesterPublicKey && requester.secondSignature && !trs.signSignature) {
-//		return setImmediate(cb, 'Missing requester second signature');
-//	}
+	if (trs.requesterPublicKey && requester.secondSignature && !trs.signSignature) {
+		return setImmediate(cb, 'Missing requester second signature');
+	}
 
 	// If second signature provided, check if requester has one enabled
-//	if (trs.requesterPublicKey && !requester.secondSignature && (trs.signSignature && trs.signSignature.length > 0)) {
-//		return setImmediate(cb, 'Requester does not have a second signature');
-//	}
+	if (trs.requesterPublicKey && !requester.secondSignature && (trs.signSignature && trs.signSignature.length > 0)) {
+		return setImmediate(cb, 'Requester does not have a second signature');
+	}
 
 	// Check sender public key
 	if (sender.publicKey && sender.publicKey !== trs.senderPublicKey) {
@@ -481,7 +498,7 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 	}
 
 	// Determine multisignatures from sender or transaction asset
-	var multisignatures = sender.multisignatures || sender.u_multisignatures || [];
+	var multisignatures = (sender.multisignatures/* || sender.u_multisignatures*/ || []).slice(); // Clone array
 	if (multisignatures.length === 0) {
 		if (trs.asset && trs.asset.multisignature && trs.asset.multisignature.keysgroup) {
 
@@ -499,12 +516,14 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 
 	// Check requester public key
 	if (trs.requesterPublicKey) {
-		multisignatures.push(trs.senderPublicKey);
+		// Needs fix: Reject transactions with requesterPublicKey property for now
+		return setImmediate(cb, 'Multisig request is not allowed');
+/*		multisignatures.push(trs.senderPublicKey);
 
-		if (sender.multisignatures.indexOf(trs.requesterPublicKey) < 0) {
+		if (!Array.isArray(sender.multisignatures) || sender.multisignatures.indexOf(trs.requesterPublicKey) < 0) {
 			return setImmediate(cb, 'Account does not belong to multisignature group');
 		}
-	}
+*/	}
 
 	// Verify signature
 	try {
@@ -528,10 +547,10 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 	}
 
 	// Verify second signature
-	if (/*requester.secondSignature ||*/ sender.secondSignature) {
+	if (trs.secondSignature || sender.secondSignature) {
 		try {
 			valid = false;
-			valid = this.verifySecondSignature(trs, (/*requester.secondPublicKey ||*/ sender.secondPublicKey), trs.signSignature);
+			valid = this.verifySecondSignature(trs, (trs.secondPublicKey || sender.secondPublicKey), trs.signSignature);
 		} catch (e) {
 			return setImmediate(cb, e.toString());
 		}
@@ -603,10 +622,11 @@ Transaction.prototype.verify = function (trs, sender, height /*requester*/, cb) 
 	__private.types[trs.type].verify.call(this, trs, sender, function (err) {
 		if (err) {
 			return setImmediate(cb, err);
-		} else {
+		} else if (checkExists) {
 			// Check for already confirmed transaction
 			return self.checkConfirmed(trs, cb);
 		}
+		return setImmediate(cb);
 	});
 };
 
@@ -814,8 +834,10 @@ Transaction.prototype.undo = function (trs, block, sender, cb) {
  * @return {setImmediateCallback} for errors | cb
  */
 Transaction.prototype.applyUnconfirmed = function (trs, sender, requester, cb) {
+	// Catch incorrect parameter usage
 	if (typeof requester === 'function') {
 		cb = requester;
+		requester = {};
 	}
 
 	// Check unconfirmed sender balance

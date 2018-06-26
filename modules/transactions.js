@@ -54,7 +54,8 @@ function Transactions (cb, scope) {
 		scope.config.broadcasts.releaseLimit,
 		scope.logic.transaction,
 		scope.bus,
-		scope.logger
+		scope.logger,
+		scope.balancesSequence
 	);
 
 	__private.assetTypes[transactionTypes.SEND] = library.logic.transaction.attachAssetType(
@@ -517,7 +518,7 @@ Transactions.prototype.applyUnconfirmed = function (transaction, sender, cb) {
 				library.logic.transaction.applyUnconfirmed(transaction, sender, requester, cb);
 			});
 		} else {
-			library.logic.transaction.applyUnconfirmed(transaction, sender, cb);
+			library.logic.transaction.applyUnconfirmed(transaction, sender, null, cb);
 		}
 	}
 };
@@ -569,7 +570,7 @@ Transactions.prototype.fillPool = function (cb) {
  * @param {function} cb - Callback function.
  */
 Transactions.prototype.sandboxApi = function (call, args, cb) {
-	sandboxHelper.callMethod(shared, call, args, cb);
+	sandboxHelper.callMethod(this.shared, call, args, cb);
 };
 
 /**

@@ -93,6 +93,25 @@ __private.getKeysSortByVote = function (cb) {
 };
 
 /**
+ * Gets delegate public keys from previous round, sorted by vote descending.
+ * @private
+ * @param {function} cb - Callback function.
+ * @returns {setImmediateCallback} 
+ */
+__private.getDelegatesFromPreviousRound = function (cb) {
+	library.db.query(sql.getDelegatesSnapshot, {limit: slots.delegates}).then(function (rows) {
+		var delegatesPublicKeys = [];
+		rows.forEach(function (row) {
+			delegatesPublicKeys.push(row.publicKey.toString('hex'));
+		});
+		return setImmediate(cb, null, delegatesPublicKeys);
+	}).catch(function (err) {
+		library.logger.error(err.stack);
+		return setImmediate(cb, 'getDelegatesSnapshot database query failed');
+	});
+};
+
+/**
  * Gets slot time and keypair.
  * @private
  * @param {number} slot
@@ -161,29 +180,24 @@ __private.forge = function (cb) {
 			return setImmediate(cb);
 		}
 
-		library.sequence.add(function (cb) {
-			async.series({
-				getPeers: function (seriesCb) {
-					return modules.transport.getPeers({limit: constants.maxPeers}, seriesCb);
-				},
-				checkBroadhash: function (seriesCb) {
-					if (modules.transport.poorConsensus()) {
-						return setImmediate(seriesCb, ['Inadequate broadhash consensus', modules.transport.consensus(), '%'].join(' '));
-					} else {
-						return setImmediate(seriesCb);
-					}
-				}
-			}, function (err) {
-				if (err) {
-					library.logger.warn(err);
-					return setImmediate(cb, err);
+		async.series({
+			getPeers: function (seriesCb) {
+				return modules.transport.getPeers({limit: constants.maxPeers}, seriesCb);
+			},
+			checkBroadhash: function (seriesCb) {
+				if (modules.transport.poorConsensus()) {
+					return setImmediate(seriesCb, ['Inadequate broadhash consensus', modules.transport.consensus(), '%'].join(' '));
 				} else {
-					return modules.blocks.process.generateBlock(currentBlockData.keypair, currentBlockData.time, cb);
+					return setImmediate(seriesCb);
 				}
-			});
+			},
+			generateBlock: function (seriesCb) {
+				return modules.blocks.process.generateBlock(currentBlockData.keypair, currentBlockData.time, seriesCb);
+			}
 		}, function (err) {
 			if (err) {
 				library.logger.error('Failed to generate block within delegate slot', err);
+				return setImmediate(cb, err);
 			} else {
 				var forgedBlock = modules.blocks.lastBlock.get();
 				modules.blocks.lastReceipt.update();
@@ -195,9 +209,9 @@ __private.forge = function (cb) {
 					'slot:', slots.getSlotNumber(currentBlockData.time),
 					'reward:' + forgedBlock.reward
 				].join(' '));
-			}
 
-			return setImmediate(cb);
+				return setImmediate(cb);
+			}
 		});
 	});
 };
@@ -507,6 +521,17 @@ Delegates.prototype.validateBlockSlot = function (block, cb) {
 };
 
 /**
+ * Generates delegate list and checks if block generator public Key
+ * matches delegate id - against previous round.
+ * @param {block} block
+ * @param {function} cb - Callback function.
+ * @returns {setImmediateCallback} error message | cb
+ */
+Delegates.prototype.validateBlockSlotAgainstPreviousRound = function (block, cb) {
+	__private.validateBlockSlot(block, __private.getDelegatesFromPreviousRound, cb);
+};
+
+/**
  * Calls helpers.sandbox.callMethod().
  * @implements module:helpers#callMethod
  * @param {function} call - Method to call.
@@ -550,16 +575,18 @@ Delegates.prototype.onBlockchainReady = function () {
 	__private.loadDelegates(function (err) {
 
 		function nextForge (cb) {
-			if (err) {
-				library.logger.error('Failed to load delegates', err);
-			}
+			library.sequence.add(function (cb) {
+				if (err) {
+					library.logger.error('Failed to load delegates', err);
+				}
 
-			async.series([
-				__private.forge,
-				modules.transactions.fillPool
-			], function () {
-				return setImmediate(cb);
-			});
+				async.series([
+					__private.forge,
+					modules.transactions.fillPool
+				], function () {
+					return setImmediate(cb);
+				});
+			}, cb);
 		}
 
 		jobsQueue.register('delegatesNextForge', nextForge, 1000);
