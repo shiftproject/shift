@@ -1,4 +1,4 @@
-## SHIFT version 6.7.1
+## SHIFT version 6.8.2
 
 ## Installation
 
@@ -40,7 +40,7 @@ Shift node status, is it running or not?
 ```
 ./shift_manager.bash status
 ```
-Rebuild blockchain fron official snapshot
+Rebuild blockchain from official snapshot
 ```
 ./shift_manager.bash rebuild
 ```
@@ -49,7 +49,6 @@ Rebuild blockchain fron official snapshot
 - Mariusz Serek <mariusz@serek.net>
 - Goldeneye (Shift Team)
 - Ralfs (Shift Team)
-- Jan (Shift Team)
 - Joey <shiftcurrency@gmail.com>
 - Boris Povod <boris@crypti.me>
 - Pavel Nekrasov <landgraf.paul@gmail.com>
@@ -59,7 +58,7 @@ Rebuild blockchain fron official snapshot
 
 ## License
 
-Copyright © 2016-2017 Shift  
+Copyright © 2016-2018 Shift  
 Copyright © 2016-2017 Lisk Foundation
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
@@ -72,7 +71,7 @@ You should have received a copy of the [GNU General Public License](https://gith
 
 This program also incorporates work previously released with lisk `0.7.0` (and earlier) versions under the [MIT License](https://opensource.org/licenses/MIT). To comply with the requirements of that license, the following permission notice, applicable to those parts of the code only, is included below:
 
-Copyright © 2016-2017 Shift  
+Copyright © 2016-2018 Shift  
 Copyright © 2016-2017 Lisk Foundation  
 Copyright © 2015 Crypti
 

@@ -41,19 +41,20 @@
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
  */
 module.exports = {
-	currentVersion: '6.7.1',
+	currentVersion: '6.8.2',
 	minVersion: [
 		{ height: 1,      ver: '^6.1.0'},
 		{ height: 600000, ver: '^6.3.0'},
 		{ height: 828000, ver: '^6.5.1'},
-		{ height: 1015000, ver: '^6.6.2'}
+		{ height: 1015000, ver: '^6.6.2'},
+		{ height: 1996000, ver: '^6.8.0'}
 	],
 	activeDelegates: 101,
 	addressLength: 208,
 	blockHeaderLength: 248,
-	blockSlotWindow: 5, // window in which a slot could be accepted	
+	blockSlotWindow: 5, // window in which a slot could be accepted
 	blockTime: 27000,
-	blockReceiptTimeOut: 27*2, // 2 blocks
+	blockReceiptTimeOut: 27 * 2, // 2 blocks
 	confirmationLength: 77,
 	epochTime: new Date(Date.UTC(2016, 4, 24, 17, 0, 0, 0)),
 	fees: [
