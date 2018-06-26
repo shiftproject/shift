@@ -4,6 +4,7 @@ var _ = require('lodash');
 var BlockReward = require('../../logic/blockReward.js');
 var constants = require('../../helpers/constants.js');
 var OrderBy = require('../../helpers/orderBy.js');
+var sandboxHelper = require('../../helpers/sandbox.js');
 var schema = require('../../schema/blocks.js');
 var sql = require('../../sql/blocks.js');
 
@@ -342,6 +343,20 @@ API.prototype.getStatus = function (req, cb) {
 		supply: __private.blockReward.calcSupply(lastBlock.height)
 	});
 };
+
+/**
+ * Sandbox API wrapper (for DApps)
+ *
+ * @public
+ * @async
+ * @method sandboxApi
+ * @param  {string}   call Name of the function to be called 
+ * @param  {Object}   args Arguments
+ * @param  {Function} cb Callback function
+ */
+API.prototype.sandboxApi = function (call, args, cb) {
+	sandboxHelper.callMethod(self, call, args, cb);
+}
 
 /**
  * Handle modules initialization:

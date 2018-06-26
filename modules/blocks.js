@@ -158,7 +158,7 @@ Blocks.prototype.isCleaning = {
  * @param  {Function} cb Callback function
  */
 Blocks.prototype.sandboxApi = function (call, args, cb) {
-	sandboxHelper.callMethod(Blocks.prototype.shared, call, args, cb);
+	sandboxHelper.callMethod(this.shared, call, args, cb);
 };
 
 /**
