@@ -726,6 +726,11 @@ Transactions.prototype.shared = {
 
 			var query = {address: req.body.recipientId};
 
+			// Needs fix: Reject transactions with requesterPublicKey property for now
+			if (req.body.requesterPublicKey) {
+				return setImmediate(cb, 'Multisig request is not allowed');
+			}
+
 			library.balancesSequence.add(function (cb) {
 				modules.accounts.getAccount(query, function (err, recipient) {
 					if (err) {
