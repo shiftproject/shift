@@ -121,7 +121,7 @@ __private.list = function (filter, cb) {
 			throw new Error('Invalid parameter supplied: ' + key);
 		}
 
-		// Mutating parametres when unix timestamp is supplied
+		// Mutating parameters when unix timestamp is supplied
 		if (_.includes(['fromUnixTime', 'toUnixTime'], field[1])) {
 			// Lisk epoch is 1464109200 as unix timestamp
 			value = value - constants.epochTime.getTime() / 1000;
@@ -662,7 +662,7 @@ Transactions.prototype.shared = {
 					return setImmediate(cb, 'Transaction not found');
 				}
 
-				if (transaction.type === 3) {
+				if (transaction.type === transactionTypes.VOTE) {
 					__private.getVotesById(transaction, function (err, transaction) {
 						return setImmediate(cb, null, {transaction: transaction});
 					});

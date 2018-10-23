@@ -7,6 +7,7 @@ var BlockReward = require('../logic/blockReward.js');
 var checkIpInList = require('../helpers/checkIpInList.js');
 var constants = require('../helpers/constants.js');
 var jobsQueue = require('../helpers/jobsQueue.js');
+var exceptions = require('../helpers/exceptions.js');
 var crypto = require('crypto');
 var Delegate = require('../logic/delegate.js');
 var extend = require('extend');
@@ -514,6 +515,12 @@ Delegates.prototype.validateBlockSlot = function (block, cb) {
 		if (delegate_id && block.generatorPublicKey === delegate_id) {
 			return setImmediate(cb);
 		} else {
+			if (exceptions.slots.hasOwnProperty(currentSlot) &&
+				exceptions.slots[currentSlot][0] == delegate_id &&
+				exceptions.slots[currentSlot][1] == block.generatorPublicKey) {
+					return setImmediate(cb);
+			}
+
 			library.logger.error('Expected generator: ' + delegate_id + ' Received generator: ' + block.generatorPublicKey);
 			return setImmediate(cb, 'Failed to verify slot: ' + currentSlot);
 		}

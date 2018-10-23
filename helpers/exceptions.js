@@ -2,16 +2,25 @@
 /**
  * @namespace exceptions
  * @memberof module:helpers
+ * @property {array[]} blockRewards
+ * @property {object} slots (id: [expected generator, received generator])
  * @property {object} genesisPublicKey
  * @property {string} genesisPublicKey.mainnet
  * @property {string} genesisPublicKey.testnet
- * @property {Strin[]} senderPublicKey
- * @property {Strin[]} signatures
- * @property {Strin[]} multisignatures
- * @property {Strin[]} votes
+ * @property {object} rounds 
+ * @property {array[]} senderPublicKey
+ * @property {array[]} signatures
+ * @property {array[]} secondSignatures
+ * @property {array[]} multisignatures
+ * @property {object} addresses
+ * @property {array[]} balance
+ * @property {object} votes: (id: true = apply || false = ignore)
  */	
 module.exports = {
 	blockRewards: [],
+	slots: {
+		"1350046":['9a4d69d5ba637fea3934dafbb613b4ba235b07e569fef5dcf1185debde131dc3','20bef0f43dee2291391c83d100fb77b886aa762e18e96c85663c754e96de5cbe']
+	},
 	genesisPublicKey: {
 		mainnet: '3c4bd532ef8a90c0105f1b21458abf652b1e7ca100f664c39a3bbfc2e682efef',
 		testnet: '03f5d49d8bf116e59c2306d40f03c35fcb6a8ac12932203460c8ece4d69ea0f4'
@@ -22,9 +31,17 @@ module.exports = {
 	],
 	signatures: [
 	],
+	secondSignatures: [
+		'6528919524123437903'
+	],
 	multisignatures: [
 		'8548637417376353222'   // 31814
 	],
+	addresses: {
+		'15578911456787184563': '183034647201653942851S', // 816651
+		'9091446542630302058': '160023451684967504001S', // 858099
+		'2132715612539646373': '74356277099232002245S' // 1526332
+	},
 	balance: [
 		'7251508358929535575',  // 18834
 		'17388204246574406415', // 70714
@@ -124,6 +141,6 @@ module.exports = {
 		'15574682025014294681', // 70778
 		'4456755961607531316',  // 70785
 	],
-	votes: [
-	]
+	votes: {
+	}
 };

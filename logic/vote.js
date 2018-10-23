@@ -151,7 +151,7 @@ Vote.prototype.verifyVote = function (vote, cb) {
  */
 Vote.prototype.checkConfirmedDelegates = function (trs, cb) {
 	modules.delegates.checkConfirmedDelegates(trs.senderPublicKey, trs.asset.votes, function (err) {
-		if (err && exceptions.votes.indexOf(trs.id) > -1) {
+		if (err && exceptions.votes.hasOwnProperty(trs.id) > -1) {
 			library.logger.debug(err);
 			library.logger.debug(JSON.stringify(trs));
 			err = null;
@@ -171,7 +171,7 @@ Vote.prototype.checkConfirmedDelegates = function (trs, cb) {
  */
 Vote.prototype.checkUnconfirmedDelegates = function (trs, cb) {
 	modules.delegates.checkUnconfirmedDelegates(trs.senderPublicKey, trs.asset.votes, function (err) {
-		if (err && exceptions.votes.indexOf(trs.id) > -1) {
+		if (err && exceptions.votes.hasOwnProperty(trs.id) > -1) {
 			library.logger.debug(err);
 			library.logger.debug(JSON.stringify(trs));
 			err = null;
@@ -226,6 +226,10 @@ Vote.prototype.apply = function (trs, block, sender, cb) {
 
 	async.series([
 		function (seriesCb) {
+			if (exceptions.votes.hasOwnProperty(trs.id) > -1 && exceptions.votes[trs.id] === false) {
+				return cb();
+			}
+
 			self.checkConfirmedDelegates(trs, seriesCb);
 		},
 		function (seriesCb) {
