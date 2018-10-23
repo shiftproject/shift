@@ -1,6 +1,6 @@
 {
   "name": "shift",
-  "version": "6.8.2t",
+  "version": "6.8.3t",
   "private": true,
   "scripts": {
     "start": "node app.js",
@@ -35,7 +35,7 @@
     "json-schema": "=0.2.3",
     "json-sql": "https://github.com/LiskHQ/json-sql/tarball/master",
     "shift-sandbox": "https://github.com/ShiftNrg/shift-sandbox/tarball/master",
-    "lodash": "=4.17.4",
+    "lodash": "=4.17.5",
     "method-override": "=2.3.7",
     "nan": "=2.2.1",
     "npm": "=2.15.10",

@@ -2,6 +2,7 @@
 
 var _ = require('lodash');
 var bignum = require('../helpers/bignum.js');
+var UINT64_MAX = new bignum('18446744073709551615');
 var ByteBuffer = require('bytebuffer');
 var constants = require('../helpers/constants.js');
 var crypto = require('crypto');
@@ -223,11 +224,31 @@ Transaction.prototype.getBytes = function (trs, skipSignature, skipSecondSignatu
 		}
 
 		if (trs.recipientId) {
-			var recipient = trs.recipientId.slice(0, -1);
-			recipient = new bignum(recipient).toBuffer({size: 8});
+			var recipientString = trs.recipientId.slice(0, -1);
+			var recipientNumber = new bignum(recipientString);
+
+			// Check format
+			if (recipientString !== recipientNumber.toString(10)) {
+				throw 'Recipient address number does not have natural represenation'; // e.g. leading zeros
+			}
+
+			// Check max length
+			if (UINT64_MAX.lt(recipientNumber)) {
+				if (exceptions.addresses.hasOwnProperty(trs.id)) {
+					if (trs.recipientId !== exceptions.addresses[trs.id]) {
+						throw 'Recipient address ' + trs.recipientId + ' does not match the one fixed in exception: ' + exceptions.addresses[trs.id];
+					}
+				} else {
+					throw 'Recipient address number exceeds uint64 range';
+				}
+			}
+
+			// For numbers exceeding the uint64 range, this produces 16 bytes.
+			// This behaviour must be preserved to verify legacy data
+			var recipientSerialized = recipientNumber.toBuffer({ size: 8 });
 
 			for (i = 0; i < 8; i++) {
-				bb.writeByte(recipient[i] || 0);
+				bb.writeByte(recipientSerialized[i] || 0);
 			}
 		} else {
 			for (i = 0; i < 8; i++) {
@@ -436,7 +457,7 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 	if (typeof checkExists === 'function') {
 		cb = checkExists;
 		checkExists = true;
-	}	
+	}
 
 	// Set default value of param if not provided
 	if (requester === undefined || requester === null) {
@@ -527,7 +548,6 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 
 	// Verify signature
 	try {
-		valid = false;
 		valid = this.verifySignature(trs, (trs.requesterPublicKey || trs.senderPublicKey), trs.signature);
 	} catch (e) {
 		this.scope.logger.error(e.stack);
@@ -547,16 +567,23 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 	}
 
 	// Verify second signature
-	if (trs.secondSignature || sender.secondSignature) {
+	if (sender.secondSignature) {
 		try {
-			valid = false;
-			valid = this.verifySecondSignature(trs, (trs.secondPublicKey || sender.secondPublicKey), trs.signSignature);
+			valid = this.verifySecondSignature(trs, sender.secondPublicKey, trs.signSignature);
 		} catch (e) {
 			return setImmediate(cb, e.toString());
 		}
 
 		if (!valid) {
-			return setImmediate(cb, 'Failed to verify second signature');
+			err = 'Failed to verify second signature';
+
+			if (exceptions.secondSignatures.indexOf(trs.id) > -1) {
+				this.scope.logger.debug(err, trs);
+				valid = true;
+				err = null;
+			} else {
+				return setImmediate(cb, err);
+			}
 		}
 	}
 
@@ -789,8 +816,7 @@ Transaction.prototype.apply = function (trs, block, sender, cb) {
  * @return {setImmediateCallback} for errors | cb
  */
 Transaction.prototype.undo = function (trs, block, sender, cb) {
-	var amount = new bignum(trs.amount.toString());
-	    amount = amount.plus(trs.fee.toString()).toNumber();
+	var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
 
 	this.scope.logger.trace('Logic/Transaction->undo', {sender: sender.address, balance: amount, blockId: block.id, round: modules.rounds.calc(block.height)});
 	this.scope.account.merge(sender.address, {
@@ -880,8 +906,7 @@ Transaction.prototype.applyUnconfirmed = function (trs, sender, requester, cb) {
  * @return {setImmediateCallback} for errors | cb
  */
 Transaction.prototype.undoUnconfirmed = function (trs, sender, cb) {
-	var amount = new bignum(trs.amount.toString());
-	    amount = amount.plus(trs.fee.toString()).toNumber();
+	var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
 
 	this.scope.account.merge(sender.address, {u_balance: amount}, function (err, sender) {
 		if (err) {
