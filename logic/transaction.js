@@ -229,7 +229,7 @@ Transaction.prototype.getBytes = function (trs, skipSignature, skipSecondSignatu
 
 			// Check format
 			if (recipientString !== recipientNumber.toString(10)) {
-				throw 'Recipient address number does not have natural represenation'; // e.g. leading zeros
+				throw 'Recipient address number does not have a natural representation'; // e.g. leading zeros
 			}
 
 			// Check max length
