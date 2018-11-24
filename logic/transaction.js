@@ -539,12 +539,12 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 	if (trs.requesterPublicKey) {
 		// Needs fix: Reject transactions with requesterPublicKey property for now
 		return setImmediate(cb, 'Multisig request is not allowed');
-/*		multisignatures.push(trs.senderPublicKey);
+		/*multisignatures.push(trs.senderPublicKey);
 
 		if (!Array.isArray(sender.multisignatures) || sender.multisignatures.indexOf(trs.requesterPublicKey) < 0) {
 			return setImmediate(cb, 'Account does not belong to multisignature group');
-		}
-*/	}
+		}*/
+	}
 
 	// Verify signature
 	try {

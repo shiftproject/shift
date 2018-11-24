@@ -518,7 +518,7 @@ Delegates.prototype.validateBlockSlot = function (block, cb) {
 			if (exceptions.slots.hasOwnProperty(currentSlot) &&
 				exceptions.slots[currentSlot][0] == delegate_id &&
 				exceptions.slots[currentSlot][1] == block.generatorPublicKey) {
-					return setImmediate(cb);
+				return setImmediate(cb);
 			}
 
 			library.logger.error('Expected generator: ' + delegate_id + ' Received generator: ' + block.generatorPublicKey);
