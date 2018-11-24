@@ -36,7 +36,7 @@
     "json-sql": "https://github.com/LiskHQ/json-sql/tarball/master",
     "lisk-sandbox": "https://github.com/ShiftNrg/lisk-sandbox/tarball/master",
     "lodash": "=4.17.5",
-    "method-override": "=2.3.7",
+    "method-override": "=2.3.10",
     "nan": "=2.2.1",
     "npm": "=2.15.10",
     "pg-monitor": "=0.7.1",
