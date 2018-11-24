@@ -229,7 +229,7 @@ Transaction.prototype.getBytes = function (trs, skipSignature, skipSecondSignatu
 
 			// Check format
 			if (recipientString !== recipientNumber.toString(10)) {
-				throw 'Recipient address number does not have natural represenation'; // e.g. leading zeros
+				throw 'Recipient address number does not have a natural representation'; // e.g. leading zeros
 			}
 
 			// Check max length
@@ -538,13 +538,13 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 	// Check requester public key
 	if (trs.requesterPublicKey) {
 		// Needs fix: Reject transactions with requesterPublicKey property for now
-		return setImmediate(cb, 'Multisig request is not allowed');
-/*		multisignatures.push(trs.senderPublicKey);
+		return setImmediate(cb, 'Multisig request is not allowed');/*
+		multisignatures.push(trs.senderPublicKey);
 
 		if (!Array.isArray(sender.multisignatures) || sender.multisignatures.indexOf(trs.requesterPublicKey) < 0) {
 			return setImmediate(cb, 'Account does not belong to multisignature group');
-		}
-*/	}
+		}*/
+	}
 
 	// Verify signature
 	try {
