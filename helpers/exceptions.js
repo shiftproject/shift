@@ -19,7 +19,7 @@
 module.exports = {
 	blockRewards: [],
 	slots: {
-		"1350046":['9a4d69d5ba637fea3934dafbb613b4ba235b07e569fef5dcf1185debde131dc3','20bef0f43dee2291391c83d100fb77b886aa762e18e96c85663c754e96de5cbe']
+		'1350046':['9a4d69d5ba637fea3934dafbb613b4ba235b07e569fef5dcf1185debde131dc3','20bef0f43dee2291391c83d100fb77b886aa762e18e96c85663c754e96de5cbe']
 	},
 	genesisPublicKey: {
 		mainnet: '3c4bd532ef8a90c0105f1b21458abf652b1e7ca100f664c39a3bbfc2e682efef',
@@ -142,5 +142,7 @@ module.exports = {
 		'4456755961607531316',  // 70785
 	],
 	votes: {
+		'2282110162730086709': true, // 2427035
+		'18214876648030162984': true // 2447981
 	}
 };

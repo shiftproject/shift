@@ -686,7 +686,9 @@ Transport.prototype.internal = {
 	},
 
 	postDappMessage: function (query, cb) {
-		if (query.body && query.body.body) query = query.body;
+		if (query.body && query.body.body) {
+			query = query.body;
+		}
 
 		try {
 			if (!query.dappid) {
@@ -725,7 +727,9 @@ Transport.prototype.internal = {
 	},
 
 	postDappRequest: function (query, cb) {
-		if (query.body && query.body.body) query = query.body;
+		if (query.body && query.body.body) {
+			query = query.body;
+		}
 		
 		try {
 			if (!query.dappid) {

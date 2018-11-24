@@ -87,8 +87,11 @@ __private.pass = function (obj, dappid) {
 			__private.pass(obj[property], dappid);
 		}
 		if (property === 'table') {
-			if (typeof obj[property] === 'string' && obj[property].indexOf('_') == 0) obj[property] = obj[property].substring(1); // Don't prefix functions
-			else obj[property] = 'dapp_' + dappid + '_' + obj[property];
+			if (typeof obj[property] === 'string' && obj[property].indexOf('_') == 0) {
+				obj[property] = obj[property].substring(1); // Don't prefix functions
+			} else {
+				obj[property] = 'dapp_' + dappid + '_' + obj[property];
+			}
 		}
 		if (property === 'join' && obj[property].length === undefined) {
 			for (var table in obj[property]) {
@@ -144,9 +147,13 @@ __private.query = function (action, config, cb) {
 
 		var preventWrap = config.hasOwnProperty('wrap') && config.wrap == false;
 		try {
-			if (preventWrap) jsonSql.configure({'wrappedIdentifiers':false});
+			if (preventWrap) {
+				jsonSql.configure({'wrappedIdentifiers':false});
+			}
 			sql = jsonSql.build(extend({}, config, defaultConfig));
-			if (preventWrap) jsonSql.configure({'wrappedIdentifiers':true});
+			if (preventWrap) {
+				jsonSql.configure({'wrappedIdentifiers':true});
+			}
 			library.logger.trace('sql.query:', sql);
 		} catch (e) {
 			return done(e);

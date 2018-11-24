@@ -41,7 +41,7 @@
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
  */
 module.exports = {
-	currentVersion: '6.8.3',
+	currentVersion: '6.8.4',
 	minVersion: [
 		{ height: 1,      ver: '^6.1.0'},
 		{ height: 600000, ver: '^6.3.0'},

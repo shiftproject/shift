@@ -690,11 +690,6 @@ __private.launchDApp = function (body, cb) {
 				return setImmediate(waterCb, 'Application already launched');
 			} else {
 				body.params = body.params || [''];
-
-				if (body.params.length > 0) {
-					body.params.push('modules.full.json');
-				}
-
 				__private.launched[body.id] = true;
 
 				return setImmediate(waterCb);
@@ -735,7 +730,7 @@ __private.launchDApp = function (body, cb) {
 		},
 		function (dapp, waterCb) {
 			dapp.relaunchBody = body;
-			__private.createSandbox(dapp, body.params || ['', 'modules.full.json'], function (err) {
+			__private.createSandbox(dapp, body.params || [], function (err) {
 				if (err) {
 					__private.launched[body.id] = false;
 					return setImmediate(waterCb, err);
@@ -828,7 +823,7 @@ __private.createSandbox = function (dapp, params, cb) {
 			runSandbox();
 		}
 
-		function runSandbox(){
+		function runSandbox (){
 			var withDebug = false;
 			process.execArgv.forEach(function (item, index) {
 				if (item.indexOf('--debug') >= 0) {
@@ -866,7 +861,7 @@ __private.createSandbox = function (dapp, params, cb) {
 						} else {
 							library.logger.warn('Delaying application restart by 30 seconds...');
 						}
-						setTimeout(function() {
+						setTimeout(function () {
 							__private.launchDApp(dapp.relaunchBody, function (err) {
 								if (err) {
 									library.logger.error('Failed to restart application', dapp.transactionId);
