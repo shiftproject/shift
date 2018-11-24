@@ -356,7 +356,7 @@ API.prototype.getStatus = function (req, cb) {
  */
 API.prototype.sandboxApi = function (call, args, cb) {
 	sandboxHelper.callMethod(self, call, args, cb);
-}
+};
 
 /**
  * Handle modules initialization:

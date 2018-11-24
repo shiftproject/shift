@@ -842,7 +842,7 @@ __private.createSandbox = function (dapp, params, cb) {
 			runSandbox();
 		}
 
-		function runSandbox(){
+		function runSandbox (){
 			var withDebug = false;
 			process.execArgv.forEach(function (item, index) {
 				if (item.indexOf('--debug') >= 0) {
@@ -880,7 +880,7 @@ __private.createSandbox = function (dapp, params, cb) {
 						} else {
 							library.logger.warn('Delaying application restart by 30 seconds...');
 						}
-						setTimeout(function() {
+						setTimeout(function () {
 							__private.launchDApp(dapp.relaunchBody, function (err) {
 								if (err) {
 									library.logger.error('Failed to restart application', dapp.transactionId);
