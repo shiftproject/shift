@@ -7,6 +7,7 @@ var ByteBuffer = require('bytebuffer');
 var constants = require('../helpers/constants.js');
 var crypto = require('crypto');
 var exceptions = require('../helpers/exceptions.js');
+var transactionTypes = require('../helpers/transactionTypes.js');
 var extend = require('extend');
 var slots = require('../helpers/slots.js');
 var sql = require('../sql/transactions.js');
@@ -24,6 +25,10 @@ var self, modules, __private = {};
  * - 5: DApp
  * - 6: InTransfer
  * - 7: OutTransfer
+ * - 8: Lock
+ * - 9: Unlock
+ * - 10: Pin
+ * - 11: Unpin
  */
 __private.types = {};
 
@@ -764,15 +769,18 @@ Transaction.prototype.apply = function (trs, block, sender, cb) {
 		return setImmediate(cb, 'Transaction is not ready');
 	}
 
-	// Check confirmed sender balance
-	var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString());
-	var senderBalance = this.checkBalance(amount, 'balance', trs, sender);
-
-	if (senderBalance.exceeded) {
-		return setImmediate(cb, senderBalance.error);
+	// Unlock should always have a negative amount
+	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
+		var amount = new bignum(-trs.amount.toString()).plus(trs.fee.toString()).toNumber();
+	} else {
+		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
 	}
 
-	amount = amount.toNumber();
+	// Check confirmed sender balance
+	var senderBalance = this.checkBalance(amount, 'balance', trs, sender);
+	if (senderBalance.exceeded) {
+		return setImmediate(cb, senderBalance.error);
+	}	
 
 	this.scope.logger.trace('Logic/Transaction->apply', {sender: sender.address, balance: -amount, blockId: block.id, round: modules.rounds.calc(block.height)});
 	this.scope.account.merge(sender.address, {
@@ -785,7 +793,7 @@ Transaction.prototype.apply = function (trs, block, sender, cb) {
 		}
 		/**
 		 * calls apply for Transfer, Signature, Delegate, Vote, Multisignature,
-		 * DApp, InTransfer or OutTransfer.
+		 * DApp, InTransfer, OutTransfer, (un)Lock or (un)Pin.
 		 */
 		__private.types[trs.type].apply.call(this, trs, block, sender, function (err) {
 			if (err) {
@@ -816,7 +824,12 @@ Transaction.prototype.apply = function (trs, block, sender, cb) {
  * @return {setImmediateCallback} for errors | cb
  */
 Transaction.prototype.undo = function (trs, block, sender, cb) {
-	var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
+	// Unlock should always have a negative amount
+	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
+		var amount = new bignum(-trs.amount.toString()).plus(trs.fee.toString()).toNumber();
+	} else {
+		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
+	}
 
 	this.scope.logger.trace('Logic/Transaction->undo', {sender: sender.address, balance: amount, blockId: block.id, round: modules.rounds.calc(block.height)});
 	this.scope.account.merge(sender.address, {
@@ -866,15 +879,18 @@ Transaction.prototype.applyUnconfirmed = function (trs, sender, requester, cb) {
 		requester = {};
 	}
 
-	// Check unconfirmed sender balance
-	var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString());
-	var senderBalance = this.checkBalance(amount, 'u_balance', trs, sender);
+	// Unlock should always have a negative amount
+	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
+		var amount = new bignum(-trs.amount.toString()).plus(trs.fee.toString()).toNumber();
+	} else {
+		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
+	}
 
+	// Check unconfirmed sender balance
+	var senderBalance = this.checkBalance(amount, 'u_balance', trs, sender);
 	if (senderBalance.exceeded) {
 		return setImmediate(cb, senderBalance.error);
 	}
-
-	amount = amount.toNumber();
 
 	this.scope.account.merge(sender.address, {u_balance: -amount}, function (err, sender) {
 		if (err) {
@@ -906,7 +922,11 @@ Transaction.prototype.applyUnconfirmed = function (trs, sender, requester, cb) {
  * @return {setImmediateCallback} for errors | cb
  */
 Transaction.prototype.undoUnconfirmed = function (trs, sender, cb) {
-	var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
+	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
+		var amount = new bignum(-trs.amount.toString()).plus(trs.fee.toString()).toNumber();
+	} else {
+		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
+	}
 
 	this.scope.account.merge(sender.address, {u_balance: amount}, function (err, sender) {
 		if (err) {

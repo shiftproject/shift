@@ -1,0 +1,520 @@
+'use strict';
+
+var async = require('async');
+var lockSettings = require('../helpers/lockSettings.js');
+var transactionTypes = require('../helpers/transactionTypes.js');
+var jobsQueue = require('../helpers/jobsQueue.js');
+var bignum = require('../helpers/bignum.js');
+var ByteBuffer = require('bytebuffer');
+
+// Private fields
+var modules, library, self, __private = {};
+
+/**
+ * Main lock logic.
+ * @memberof module:lock
+ * @class
+ * @classdesc Main lock logic.
+ */
+// Constructor
+function Lock (schema, logger, statsInterval) {
+	library = {
+		schema: schema,
+		logger: logger
+	};
+	self = this;
+
+	self.lockBytes = 0;
+	self.unlockBytes = 0;
+
+	// Cluster stats timer
+	function setStats (cb) {
+		if (modules && modules.locks) {
+			modules.locks.setClusterStats(function (err) {
+				if (err) {
+					library.logger.error('Cluster stats timer', err);
+				}
+				return setImmediate(cb);
+			});
+		} else {
+			cb();
+		}
+	}
+
+	jobsQueue.register('setClusterStats', setStats, statsInterval);
+}
+
+/**
+ * Binds input parameters to private variable modules.
+ * @param {Accounts} accounts
+ * @param {System} system
+ * @param {Rounds} rounds
+ * @param {Blocks} blocks
+ * @param {Locks} locks
+ * @param {Pins} pins
+ */
+Lock.prototype.bind = function (accounts, system, rounds, blocks, locks, pins) {
+	modules = {
+		accounts: accounts,
+		system: system,
+		rounds: rounds,
+		blocks: blocks,
+		locks: locks,
+		pins: pins
+	};
+};
+
+/**
+ * Assigns data to transaction recipientId and amount.
+ * @param {Object} data
+ * @param {transaction} trs
+ * @return {transaction} trs with assigned data
+ */
+Lock.prototype.create = function (data, trs) {
+	trs.recipientId = null; //data.recipientId;
+	trs.amount = data.amount;
+
+	trs.asset.lock = {
+		bytes: data.bytes
+	};
+
+	return trs;
+};
+
+/**
+ * Returns send fees from constants.
+ * @param {transaction} trs
+ * @param {account} sender
+ * @return {number} fee
+ */
+Lock.prototype.calculateFee = function (trs, sender, height) {
+	if (trs.type == transactionTypes.LOCK) {
+		return modules.system.getFees(height).fees.lock;
+	} else if (trs.type == transactionTypes.UNLOCK) {
+		return modules.system.getFees(height).fees.unlock;
+	}
+};
+
+/**
+ * Verifies recipientId and amount greather than 0.
+ * @param {transaction} trs
+ * @param {account} sender
+ * @param {function} cb
+ * @return {setImmediateCallback} errors | trs
+ */
+Lock.prototype.verify = function (trs, sender, cb) {
+	if (!sender) {
+		return setImmediate(cb, 'Missing sender', sender);
+	}
+
+	if (trs.recipientId) {
+		return setImmediate(cb, 'Invalid recipient');
+	}
+
+	if (trs.amount <= 0) {
+		return setImmediate(cb, 'Invalid transaction amount');
+	}
+
+	if (!trs.asset || !trs.asset.lock) {
+		return setImmediate(cb, 'Invalid transaction asset');
+	}
+
+	// ToDo: verify asset.bytes against self.lockBytes (using tolerance)
+
+	if (trs.type == transactionTypes.LOCK) {
+		var availableBalance = new bignum(sender.balance.toString()).minus(sender.locked_balance.toString());
+		var totalAmount = new bignum(trs.amount.toString()).plus(trs.fee.toString());
+		if (availableBalance.lessThan(totalAmount)) {
+			var err = [
+				'Account does not have enough SHIFT:', sender.address,
+				'Available balance:', availableBalance.div(Math.pow(10,8))
+			].join(' ');
+
+			return setImmediate(cb, err);
+		}
+
+		var lastBlock = modules.blocks.lastBlock.get();
+		self.calcLockBytes(lastBlock.height, trs.amount, function(err, result){
+			if (err) {
+				return cb('CalcLockedBytes error: ' + err);
+			}
+
+			self.lockBytes = Math.round(result);
+
+			return setImmediate(cb, err, trs);
+		});
+	}
+
+	if (trs.type == transactionTypes.UNLOCK) {
+		var availableBalance = new bignum(sender.balance.toString())
+		var unlockAmount = availableBalance.minus(trs.fee.toString()).minus(trs.amount.toString());
+		if (unlockAmount.lessThan(0)) {
+			var err = 'You do not have enough SHIFT to perform an unlock request';
+			return setImmediate(cb, err);
+		}
+
+		var publicKey = trs.senderPublicKey; //Buffer.from(sender.publicKey, 'hex');
+		self.calcUnlockBytes(trs, function (err, result) {
+			if (err || !result) {
+				return cb('calcUnlockBytes error: ' + err);
+			}
+
+			self.unlockBytes = Math.round(result);
+
+			modules.locks.getLockedBytes(publicKey, function (err, result) {
+				if (err/* || !result.bytes*/) {
+					return cb('getLockedBytes error: ' + err);
+				}
+
+				var lockedBytes = result.bytes;
+
+				modules.pins.getPinnedBytes(publicKey, function (err, pinnedBytes) {
+					var availableLockedBytes = lockedBytes - pinnedBytes;
+
+					if (availableLockedBytes - self.unlockBytes < 0) {
+						return setImmediate(cb, 'Account does not have enough available bytes locked to complete unlock request');
+					}
+
+					return setImmediate(cb, err, trs);
+				});
+			});
+		});
+	}
+};
+
+/**
+ * @param {transaction} trs
+ * @param {account} sender
+ * @param {function} cb
+ * @return {setImmediateCallback} cb, null, trs
+ */
+Lock.prototype.process = function (trs, sender, cb) {
+	return setImmediate(cb, null, trs);
+};
+
+/**
+ * Creates a buffer with asset.lock information.
+ * @param {transaction} trs
+ * @return {Array} Buffer
+ * @throws {e} error
+ */
+Lock.prototype.getBytes = function (trs) {
+	if (!trs.asset.lock.bytes) {
+		return null;
+	}
+
+	var buf;
+
+	try {
+		buf = Buffer.from([]);
+
+		var byteBuf = new ByteBuffer(8, true);
+		byteBuf.writeUint64(trs.asset.lock.bytes, 0);
+		byteBuf.flip();
+
+		buf = Buffer.concat([buf, byteBuf.toBuffer()]);
+	} catch (e) {
+		throw e;
+	}
+
+	return buf;
+};
+
+/**
+ * Calculates how many bytes to lock for the amount of coins
+ * @param {blockHeight} height
+ * @param {number} amount 
+ * @param {function} cb
+ * @return {setImmediateCallback} error | cb
+ */
+Lock.prototype.calcLockBytes = function (height, amount, cb) {
+	var compensationFactor = lockSettings.calcCompensation(height, true);
+	var ratioFactor = lockSettings.calcRatioFactor(height);
+	var tolerance = lockSettings.calcTolerance(height);
+
+	if (!amount || !compensationFactor || !ratioFactor) {
+		return setImmediate(cb, "Amount is 0");
+	}
+
+	modules.locks.getTotalLockedBytes(function (err, totalLockedBytes) {
+		if (err) {
+			return setImmediate(cb, err);
+		}
+
+		var lastBlock = modules.blocks.lastBlock.get();
+		var replication = lockSettings.locks[lockSettings.calcMilestone(lastBlock.height)].replication;
+		totalLockedBytes = totalLockedBytes * replication;
+
+		modules.locks.getClusterStats(null, function (err, totalBytes) {
+			if (err/* || !totalLockedBytes*/) {
+				return setImmediate(cb, "Total is 0");
+			}
+
+			var freeBytes = (totalBytes - (totalBytes / tolerance)) - totalLockedBytes;
+
+			if (totalLockedBytes > 0) {
+				var lockBytes = amount / (compensationFactor * (totalLockedBytes / freeBytes) * ratioFactor);
+			} else {
+				var lockBytes = amount / (compensationFactor * ratioFactor);
+			}
+
+			// ToDo 1. freeBytes must be greater than 0
+			// ToDo 2. totalLockedBytes + lockBytes cannot be greater than freeBytes
+
+			return setImmediate(cb, null, lockBytes);
+		});
+	});
+}
+
+Lock.prototype.calcUnlockBytes = function (trs, cb) {
+	var publicKey = trs.senderPublicKey; // Buffer.from(trs.senderPublicKey, 'hex');
+
+	modules.locks.getLockedBytes(publicKey, function (err, lockedBytes) {
+		if (err || !lockedBytes) {
+			return setImmediate(cb, "Locked bytes is 0");
+		}
+
+		if (trs.asset.lock.bytes > lockedBytes) {
+			return setImmediate(cb, "Bytes to unlock " + trs.asset.lock.bytes + " cannot exceed locked bytes " + lockedBytes);
+		}
+
+		var lastBlock = modules.blocks.lastBlock.get();
+		var replication = lockSettings.locks[lockSettings.calcMilestone(lastBlock.height)].replication;
+		lockedBytes = lockedBytes / replication;
+
+		modules.locks.getLockedBalance(publicKey, function (err, lockedBalance) {
+			if (err || !lockedBalance) {
+				return setImmediate(cb, "Locked balance is 0");
+			}
+
+			if (trs.amount > lockedBalance) {
+				return setImmediate(cb, "Amount to unlock " + trs.amount + " cannot exceed locked balance  " + lockedBalance);
+			}
+
+			var bytes = (lockedBytes / lockedBalance) * trs.amount * -1.0;
+
+			return setImmediate(cb, null, bytes);
+		});
+	});
+}
+
+/**
+ * Calls setAccountAndGet based on transaction recipientId and
+ * mergeAccountAndGet with unconfirmed trs amount.
+ * @implements {modules.accounts.setAccountAndGet}
+ * @implements {modules.accounts.mergeAccountAndGet}
+ * @implements {modules.rounds.calc}
+ * @param {transaction} trs
+ * @param {block} block
+ * @param {account} sender
+ * @param {function} cb - Callback function
+ * @return {setImmediateCallback} error, cb
+ */
+Lock.prototype.apply = function (trs, block, sender, cb) {
+	if (trs.type == transactionTypes.LOCK) {
+		var lockAmount = trs.amount;
+		var lockBytes = trs.asset.lock.bytes;
+	} else if (trs.type == transactionTypes.UNLOCK) {
+		var lockAmount = -trs.amount;
+		var lockBytes = -trs.asset.lock.bytes;
+	}
+
+	library.logger.logger.trace('Logic/Lock->apply ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes, height: block.height});
+
+	modules.accounts.mergeAccountAndGet({
+		address: trs.senderId,
+		locked_balance: lockAmount,
+		locked_bytes: lockBytes,
+		blockId: block.id,
+		round: modules.rounds.calc(block.height)
+	}, function (err) {
+		return setImmediate(cb, err);
+	});
+};
+
+/**
+ * Calls setAccountAndGet based on transaction recipientId and
+ * mergeAccountAndGet with unconfirmed trs amount and balance negative.
+ * @implements {modules.accounts.setAccountAndGet}
+ * @implements {modules.accounts.mergeAccountAndGet}
+ * @implements {modules.rounds.calc}
+ * @param {transaction} trs
+ * @param {block} block
+ * @param {account} sender
+ * @param {function} cb - Callback function
+ * @return {setImmediateCallback} error, cb
+ */
+Lock.prototype.undo = function (trs, block, sender, cb) {
+	if (trs.type == transactionTypes.LOCK) {
+		var lockAmount = trs.amount;
+		var lockBytes = trs.asset.lock.bytes;
+	} else if (trs.type == transactionTypes.UNLOCK) {
+		var lockAmount = -trs.amount;
+		var lockBytes = -trs.asset.lock.bytes;
+	}
+
+	modules.accounts.mergeAccountAndGet({
+		address: trs.senderId,
+		locked_balance: -lockAmount,
+		locked_bytes: -lockBytes,
+		blockId: block.id,
+		round: modules.rounds.calc(block.height)
+	}, function (err) {
+		return setImmediate(cb, err);
+	});
+};
+
+/**
+ * @param {transaction} trs
+ * @param {account} sender
+ * @param {function} cb - Callback function.
+ */
+Lock.prototype.applyUnconfirmed = function (trs, sender, cb) {
+	if (trs.type == transactionTypes.LOCK) {
+		var lockAmount = trs.amount;
+		var lockBytes = trs.asset.lock.bytes;
+	} else if (trs.type == transactionTypes.UNLOCK) {
+		var lockAmount = -trs.amount;
+		var lockBytes = -trs.asset.lock.bytes;
+	}
+
+	library.logger.logger.trace('Logic/Lock->applyUnconfirmed ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes, height: block.height});
+
+	modules.accounts.mergeAccountAndGet({
+		address: trs.senderId,
+		u_locked_balance: lockAmount,
+		u_locked_bytes: lockBytes,
+		blockId: block.id,
+		round: modules.rounds.calc(block.height)
+	}, function (err) {
+		return setImmediate(cb, err);
+	});
+};
+
+/**
+ * @param {transaction} trs
+ * @param {account} sender
+ * @param {function} cb - Callback function.
+ */
+Lock.prototype.undoUnconfirmed = function (trs, sender, cb) {
+	if (trs.type == transactionTypes.LOCK) {
+		var lockAmount = trs.amount;
+		var lockBytes = trs.asset.lock.bytes;
+	} else if (trs.type == transactionTypes.UNLOCK) {
+		var lockAmount = -trs.amount;
+		var lockBytes = -trs.asset.lock.bytes;
+	}
+
+	modules.accounts.mergeAccountAndGet({
+		address: trs.senderId,
+		u_locked_balance: -lockAmount,
+		u_locked_bytes: -lockBytes,
+		blockId: block.id,
+		round: modules.rounds.calc(block.height)
+	}, function (err) {
+		return setImmediate(cb, err);
+	});
+};
+
+Lock.prototype.schema = {
+	id: 'Locks',
+	type: 'object',
+	properties: {
+		bytes: {
+			type: 'integer',
+			minimum: 0,
+			maximum: Number.MAX_SAFE_INTEGER
+		}
+	},
+	required: ['bytes']
+};
+
+/**
+ * Deletes blockId from transaction
+ * @param {transaction} trs
+ * @return {transaction}
+ */
+Lock.prototype.objectNormalize = function (trs) {
+	delete trs.blockId;
+
+	var report = library.schema.validate(trs.asset.lock, Lock.prototype.schema);
+
+	if (!report) {
+		throw 'Failed to validate lock schema: ' + this.scope.schema.getLastErrors().map(function (err) {
+			return err.message;
+		}).join(', ');
+	}
+
+	return trs;
+};
+
+/**
+ * Creates locks object based on raw data.
+ * @param {Object} raw
+ * @return {null|lock} lock object
+ */
+Lock.prototype.dbRead = function (raw) {
+//	console.log('dbRead raw', raw);
+
+	if (!raw.l_bytes) {
+		return null;
+	} else {
+		var data = {
+//			amount: raw.t_amount,
+			bytes: Math.round(raw.l_bytes),
+//			publicKey: raw.t_senderPublicKey,
+//			address: raw.t_senderId
+		};
+/*
+		if (raw.t_type == transactionTypes.LOCK) {
+			return {lock: data};
+		} else if (raw.t_type == transactionTypes.UNLOCK) {
+			return {unlock: data};
+		}
+*/		return {lock: data};
+	}
+};
+
+Lock.prototype.dbTable = 'locks';
+
+Lock.prototype.dbFields = [
+	'bytes',
+	'transactionId'
+];
+
+/**
+ * Creates Object based on trs data.
+ * @param {transaction} trs - Contains bytes.
+ * @returns {Object} {table:locks, bytes and transaction id}.
+ */
+Lock.prototype.dbSave = function (trs) {
+	return {
+		table: this.dbTable,
+		fields: this.dbFields,
+		values: {
+			bytes: trs.asset.lock.bytes,
+			transactionId: trs.id
+		}
+	};
+};
+
+/**
+ * Checks sender multisignatures and transaction signatures.
+ * @param {transaction} trs
+ * @param {account} sender
+ * @return {boolean} True if transaction signatures greather than
+ * sender multimin or there are not sender multisignatures.
+ */
+Lock.prototype.ready = function (trs, sender) {
+	if (Array.isArray(sender.multisignatures) && sender.multisignatures.length) {
+		if (!Array.isArray(trs.signatures)) {
+			return false;
+		}
+		return trs.signatures.length >= sender.multimin;
+	} else {
+		return true;
+	}
+};
+
+// Export
+module.exports = Lock;

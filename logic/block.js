@@ -26,7 +26,7 @@ function Block (ed, schema, transaction, cb) {
 	this.scope = {
 		ed: ed,
 		schema: schema,
-		transaction: transaction,
+		transaction: transaction
 	};
 	if (cb) {
 		return setImmediate(cb, null, this);
@@ -107,8 +107,12 @@ Block.prototype.create = function (data) {
 		payloadHash.update(bytes);
 	}
 
+	var version = data.hasOwnProperty('version') && 
+		typeof data.version === 'number' && 
+		Math.floor(data.version) === data.version ? data.version : 0;
+
 	var block = {
-		version: 0,
+		version: version,
 		totalAmount: totalAmount,
 		totalFee: totalFee,
 		reward: reward,
@@ -120,6 +124,11 @@ Block.prototype.create = function (data) {
 		generatorPublicKey: data.keypair.publicKey.toString('hex'),
 		transactions: blockTransactions
 	};
+
+	// Add network stats to block
+	if (version === 1) {
+		block.clusterSize = data.hasOwnProperty('clusterSize') ? parseInt(data.clusterSize) : 0;
+	}
 
 	try {
 		block.blockSignature = this.sign(block, data.keypair);
@@ -178,6 +187,10 @@ Block.prototype.getBytes = function (block) {
 		bb.writeLong(block.totalAmount);
 		bb.writeLong(block.totalFee);
 		bb.writeLong(block.reward);
+
+		if (block.version === 1 && block.hasOwnProperty('clusterSize')) {
+			bb.writeLong(block.clusterSize);
+		}
 
 		bb.writeInt(block.payloadLength);
 
@@ -273,7 +286,7 @@ Block.prototype.dbSave = function (block) {
 		throw e;
 	}
 
-	return {
+	var db = {
 		table: this.dbTable,
 		fields: this.dbFields,
 		values: {
@@ -292,6 +305,14 @@ Block.prototype.dbSave = function (block) {
 			blockSignature: blockSignature
 		}
 	};
+	if (db.values.version == 1) {
+		if (db.fields.indexOf('clusterSize') == -1) {
+			db.fields.push('clusterSize');
+		}
+		db.values.clusterSize = block.hasOwnProperty('clusterSize') ? parseInt(block.clusterSize) : 0;
+	}
+
+	return db;
 };
 
 /**
@@ -363,6 +384,10 @@ Block.prototype.schema = {
 			type: 'integer',
 			minimum: 0
 		},
+		clusterSize: {
+			type: 'integer',
+			minimum: 0
+		},
 		transactions: {
 			type: 'array',
 			uniqueItems: true
@@ -389,6 +414,10 @@ Block.prototype.objectNormalize = function (block) {
 		if (block[i] == null || typeof block[i] === 'undefined') {
 			delete block[i];
 		}
+	}
+
+	if (block.version === 1 && !Block.prototype.schema.required.hasOwnProperty('clusterSize')) {
+		Block.prototype.schema.required.push('clusterSize');
 	}
 
 	var report = this.scope.schema.validate(block, Block.prototype.schema);
@@ -467,7 +496,11 @@ Block.prototype.dbRead = function (raw) {
 			blockSignature: raw.b_blockSignature,
 			confirmations: parseInt(raw.b_confirmations)
 		};
+		if (block.version == 1) {
+			block.clusterSize = raw.hasOwnProperty('b_clusterSize') ? parseInt(raw.b_clusterSize) : 0;
+		}
 		block.totalForged = new bignum(block.totalFee).plus(new bignum(block.reward)).toString();
+
 		return block;
 	}
 };

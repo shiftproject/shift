@@ -28,8 +28,8 @@ function Utils (logger, block, transaction, db, dbSequence, genesisblock) {
 		genesisblock: genesisblock,
 		logic: {
 			block: block,
-			transaction: transaction,
-		},
+			transaction: transaction
+		}
 	};
 	self = this;
 
@@ -267,6 +267,7 @@ Utils.prototype.loadBlocksData = function (filter, options, cb) {
 		library.db.query(sql.getHeightByLastId, { lastId: filter.lastId || null }).then(function (rows) {
 
 			var height = rows.length ? rows[0].height : 0;
+			
 			// Calculate max block height for database query
 			var realLimit = height + (parseInt(filter.limit) || 1);
 

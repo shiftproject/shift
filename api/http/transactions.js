@@ -16,6 +16,12 @@ var httpApi = require('../../helpers/httpApi');
  *  - get	/multisignatures
  * 	- get	/unconfirmed/get
  * 	- get	/unconfirmed
+ * 	- get	/locks
+ * 	- get	/locks/get
+ * 	- get	/pins
+ * 	- get	/pins/get
+ * 	- get	/pins/getBytes
+ * 	- get	/pins/verify
  * 	- put	/
  * @memberof module:transactions
  * @requires helpers/Router
@@ -44,6 +50,12 @@ function TransactionsHttpApi (transactionsModule, app, logger, cache) {
 		'get /multisignatures': 'getMultisignatureTransactions',
 		'get /unconfirmed/get': 'getUnconfirmedTransaction',
 		'get /unconfirmed': 'getUnconfirmedTransactions',
+		'get /locks': 'getLockTransaction',
+		'get /locks/get': 'getLockTransaction',
+		'get /pins': 'getPinTransaction',
+		'get /pins/get': 'getPinTransaction',
+		'get /pins/getBytes': 'getPinnedBytes',
+		'put /pins/verify': 'verifyPin',
 		'put /': 'addTransactions'
 	});
 

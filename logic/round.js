@@ -147,7 +147,7 @@ Round.prototype.flushRound = function () {
 };
 
 /**
- * Calls sql truncateBlocks: deletes blocks greather than height from
+ * Calls sql truncateBlocks: deletes blocks greater than height from
  * `blocks` table.
  * @return {function} Promise
  */
@@ -208,13 +208,12 @@ Round.prototype.applyRound = function () {
 
 	// Batch rewards to team account per round
 	var salary = __private.blockReward.calcSalary(this.scope.block.height);
-	this.scope.library.logger.info('**** salary at height ' + this.scope.block.height.toString() + ' is ' + salary.toString());
+	this.scope.library.logger.trace('**** salary at height ' + this.scope.block.height.toString() + ' is ' + salary.toString());
 
 	if (salary > 0) {
 		var teamAccount = this.scope.modules.system.getTeamAccount();
-		this.scope.library.logger.info('**** teamAccount: ' + teamAccount.toString());
 		salary *= this.scope.roundDelegates.length;
-		this.scope.library.logger.info('**** salary for round: ' + salary.toString());
+		this.scope.library.logger.trace('**** teamAccount: ' + teamAccount.toString() + ', salary for round: ' + salary.toString());
 
 		queries.push(this.scope.modules.accounts.mergeAccountAndGet({
 			publicKey: teamAccount,

@@ -313,7 +313,9 @@ Vote.prototype.undoUnconfirmed = function (trs, sender, cb) {
 
 	var votesInvert = Diff.reverse(trs.asset.votes);
 
-	this.scope.account.merge(sender.address, {u_delegates: votesInvert}, function (err) {
+	this.scope.account.merge(sender.address, {
+		u_delegates: votesInvert
+	}, function (err) {
 		return setImmediate(cb, err);
 	});
 };
@@ -363,8 +365,6 @@ Vote.prototype.objectNormalize = function (trs) {
  * @return {null|votes} votes object
  */
 Vote.prototype.dbRead = function (raw) {
-	// console.log(raw.v_votes);
-
 	if (!raw.v_votes) {
 		return null;
 	} else {

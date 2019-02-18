@@ -1,6 +1,6 @@
 {
   "name": "shift",
-  "version": "6.8.4t",
+  "version": "7.0.0t",
   "private": true,
   "scripts": {
     "start": "node app.js",
@@ -11,7 +11,7 @@
     "jsdoc": "jsdoc -c docs/conf.json --verbose --pedantic",
     "server-docs": "npm run jsdoc && http-server docs/jsdoc/"
   },
-  "author": "Lisk Foundation <admin@lisk.io>, lightcurve GmbH <admin@lightcurve.io>, Shift Team",
+  "author": "Lisk Foundation <admin@lisk.io>, lightcurve GmbH <admin@lightcurve.io>, Shift Team <connect@shiftnrg.org>",
   "license": "GPL-3.0",
   "dependencies": {
     "async": "=2.1.4",
@@ -30,12 +30,12 @@
     "express-domain-middleware": "=0.1.0",
     "express-query-int": "=1.0.1",
     "express-rate-limit": "=2.6.0",
-    "extend": "=3.0.0",
+    "extend": "=3.0.2",
     "ip": "https://github.com/ShiftNrg/node-ip/tarball/master",
     "json-schema": "=0.2.3",
     "json-sql": "https://github.com/LiskHQ/json-sql/tarball/master",
     "shift-sandbox": "https://github.com/ShiftNrg/shift-sandbox/tarball/master",
-    "lodash": "=4.17.5",
+    "lodash": "=4.17.11",
     "method-override": "=2.3.10",
     "nan": "=2.2.1",
     "npm": "=2.15.10",

@@ -314,7 +314,7 @@ Rounds.prototype.onBind = function (scope) {
 		blocks: scope.blocks,
 		accounts: scope.accounts,
 		delegates: scope.delegates,
-		system: scope.system,
+		system: scope.system
 	};
 };
 

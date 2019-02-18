@@ -6,7 +6,11 @@
  * @property {number} activeDelegates - The default number of delegates.
  * @property {number} addressLength - The default address length.
  * @property {number} blockHeaderLength - The default block header length.
+ * @property {number} blockSlotWindow - Max window in which a slot could be accepted
+ * @property {number} blockStatsInterval - Save cluster stats each x blocks
+ * @property {number} blockTime
  * @property {number} blockReceiptTimeOut
+ * @property {object} blockVersion - Block format version
  * @property {number} confirmationLength
  * @property {Date} epochTime
  * @property {object} fees - The default values for fees.
@@ -41,19 +45,28 @@
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
  */
 module.exports = {
-	currentVersion: '6.8.4t',
+	currentVersion: '7.0.0t',
 	minVersion: [
 		{ height: 1,      ver: '^6.0.1t'},
 		{ height: 370000, ver: '^6.3.0t'},
 		{ height: 640000, ver: '^6.5.0t'},
-		{ height: 1617500, ver: '^6.8.0t'}
+		{ height: 1617500, ver: '^6.8.0t'},
+		{ height: 2282000, ver: '^7.0.0t'}
+	],
+	minVersion: [
+		{ height: 1, ver: '^7.0.0t'},
 	],
 	activeDelegates: 101,
 	addressLength: 208,
 	blockHeaderLength: 248,
-	blockSlotWindow: 5, // window in which a slot could be accepted
+	blockSlotWindow: 5,
+	blockStatsInterval: 10,
 	blockTime: 27000,
 	blockReceiptTimeOut: 27 * 2, // 2 blocks
+	blockVersion: [
+		{ height: 1, ver: 0},
+		{ height: 65228, ver: 1}
+	],
 	confirmationLength: 77,
 	epochTime: new Date(Date.UTC(2016, 4, 24, 17, 0, 0, 0)),
 	fees: [
@@ -69,14 +82,18 @@ module.exports = {
 			}
 		},
 		{
-			height: 640000,
+			height: 2,
 			fees: {
 				send: 1000000,		// 0.01
 				vote: 100000000,	// 1
 				secondsignature: 10000000,	// 0.1
 				delegate: 6000000000,	// 60
 				multisignature: 50000000, // 0.5
-				dapp: 2500000000	//25
+				dapp: 2500000000,	// 25
+				lock: 1000000,		// 0.01
+				unlock: 1000000,		// 0.01
+				pin: 1000000,		// 0.01
+				unpin: 1000000		// 0.01
 			}
 		}
 	],
@@ -104,7 +121,7 @@ module.exports = {
 		'69844b687d92e831625e01e30c7b532a2d330a3727e0db2e59be3891cf0dc551',
 		// Testnet
 		'6d90dfdc4be3861b9fa3374a2d839bae6aa3aada3cc37de145cf29f44ab4cb99'
-	],	
+	],
 	rewards: [
 		{ height: 1,        reward: 0,         salary: 0 },
 		{ height: 10,       reward: 100000000, salary: 0 },
@@ -115,6 +132,9 @@ module.exports = {
 		{ height: 1617500,  reward: 100000000, salary: 10000000 },
 		{ height: 3164000,  reward: 90000000,  salary: 10000000 },
 		{ height: 4332000,  reward: 80000000,  salary: 9000000 }
+	],
+	locks: [
+		{ height: 1, replication: 3, ratio_factor: 100, tolerance: 10 }
 	],
 	signatureLength: 196,
 	totalAmount: 1009000000000000,

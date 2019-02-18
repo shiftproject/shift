@@ -368,7 +368,7 @@ API.prototype.onBind = function (scope) {
 	library.logger.trace('Blocks->API: Shared modules bind.');
 	modules = {
 		blocks: scope.blocks,
-		system: scope.system,
+		system: scope.system
 	};
 
 	// Set module as loaded

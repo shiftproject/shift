@@ -507,7 +507,7 @@ __private.popLastBlock = function (oldLastBlock, cb) {
 	// Execute in sequence via balancesSequence
 	library.balancesSequence.add(function (cb) {
 		// Load previous block from full_blocks_list table
-		// TODO: Can be inefficient, need performnce tests
+		// TODO: Can be inefficient, need performance tests
 		modules.blocks.utils.loadBlocksPart({ id: oldLastBlock.previousBlock }, function (err, previousBlock) {
 			if (err || !previousBlock.length) {
 				return setImmediate(cb, err || 'previousBlock is null');
@@ -659,7 +659,7 @@ Chain.prototype.onBind = function (scope) {
 		accounts: scope.accounts,
 		blocks: scope.blocks,
 		rounds: scope.rounds,
-		transactions: scope.transactions,
+		transactions: scope.transactions
 	};
 
 	// Set module as loaded
