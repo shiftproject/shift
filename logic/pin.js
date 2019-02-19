@@ -183,6 +183,29 @@ Pin.prototype.getBytes = function (trs) {
 };
 
 /**
+ * Defines the pin values should be positive or negative based on the transaction type
+ * @param {transaction} trs
+ * @return error, pinBytes
+ */
+Pin.prototype.getPin = function (trs, revert) {
+	var err = null, pinBytes = 0;
+
+	if (trs.type == transactionTypes.PIN) {
+		pinBytes = trs.asset.pin.bytes;
+	} else if (trs.type == transactionTypes.UNPIN) {
+		pinBytes = trs.asset.pin.bytes * -1;
+	} else {
+		err = 'Not a pin or unpin transaction type';
+	}
+
+	if (revert) {
+		pinBytes *= -1;
+	}
+
+	return [err, pinBytes];
+}
+
+/**
  * Calls setAccountAndGet based on transaction senderId and
  * mergeAccountAndGet with unconfirmed trs amount.
  * @implements {modules.accounts.setAccountAndGet}
@@ -195,10 +218,9 @@ Pin.prototype.getBytes = function (trs) {
  * @return {setImmediateCallback} error, cb
  */
 Pin.prototype.apply = function (trs, block, sender, cb) {
-	if (trs.type == transactionTypes.PIN) {
-		var pinBytes = trs.asset.pin.bytes;
-	} else if (trs.type == transactionTypes.UNPIN) {
-		var pinBytes = -trs.asset.pin.bytes;
+	var [err, pinBytes] = self.getPin(trs, false);
+	if (err) {
+		return setImmediate(cb, err);
 	}
 
 	library.logger.logger.trace('Logic/Pin->apply ' + (trs.type == 10 ? 'pin' : 'unpin'), {sender: trs.senderId, bytes: pinBytes, height: block.height});
@@ -226,10 +248,9 @@ Pin.prototype.apply = function (trs, block, sender, cb) {
  * @return {setImmediateCallback} error, cb
  */
 Pin.prototype.undo = function (trs, block, sender, cb) {
-	if (trs.type == transactionTypes.PIN) {
-		var pinBytes = trs.asset.pin.bytes;
-	} else if (trs.type == transactionTypes.UNPIN) {
-		var pinBytes = -trs.asset.pin.bytes;
+	var [err, pinBytes] = self.getPin(trs, true);
+	if (err) {
+		return setImmediate(cb, err);
 	}
 
 	modules.accounts.setAccountAndGet({address: trs.senderId}, function (err, recipient) {
@@ -239,7 +260,7 @@ Pin.prototype.undo = function (trs, block, sender, cb) {
 
 		modules.accounts.mergeAccountAndGet({
 			address: trs.senderId,
-			pinned_bytes: -pinBytes,
+			pinned_bytes: pinBytes,
 			blockId: block.id,
 			round: modules.rounds.calc(block.height)
 		}, function (err) {
@@ -255,10 +276,9 @@ Pin.prototype.undo = function (trs, block, sender, cb) {
  * @return {setImmediateCallback} cb
  */
 Pin.prototype.applyUnconfirmed = function (trs, sender, cb) {
-	if (trs.type == transactionTypes.PIN) {
-		var pinBytes = trs.asset.pin.bytes;
-	} else if (trs.type == transactionTypes.UNPIN) {
-		var pinBytes = -trs.asset.pin.bytes;
+	var [err, pinBytes] = self.getPin(trs, false);
+	if (err) {
+		return setImmediate(cb, err);
 	}
 
 	library.logger.logger.trace('Logic/Pin->apply ' + (trs.type == 10 ? 'pin' : 'unpin'), {sender: trs.senderId, bytes: pinBytes, height: block.height});
@@ -281,10 +301,9 @@ Pin.prototype.applyUnconfirmed = function (trs, sender, cb) {
  * @return {setImmediateCallback} cb
  */
 Pin.prototype.undoUnconfirmed = function (trs, sender, cb) {
-	if (trs.type == transactionTypes.PIN) {
-		var pinBytes = trs.asset.pin.bytes;
-	} else if (trs.type == transactionTypes.UNPIN) {
-		var pinBytes = -trs.asset.pin.bytes;
+	var [err, pinBytes] = self.getPin(trs, true);
+	if (err) {
+		return setImmediate(cb, err);
 	}
 
 	modules.accounts.setAccountAndGet({address: trs.senderId}, function (err, recipient) {
@@ -294,7 +313,7 @@ Pin.prototype.undoUnconfirmed = function (trs, sender, cb) {
 
 		modules.accounts.mergeAccountAndGet({
 			address: trs.senderId,
-			u_pinned_bytes: -pinBytes,
+			u_pinned_bytes: pinBytes,
 			blockId: block.id,
 			round: modules.rounds.calc(block.height)
 		}, function (err) {

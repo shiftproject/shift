@@ -122,8 +122,8 @@ Lock.prototype.verify = function (trs, sender, cb) {
 	// ToDo: verify asset.bytes against self.lockBytes (using tolerance)
 
 	if (trs.type == transactionTypes.LOCK) {
-		var availableBalance = new bignum(sender.balance.toString()).minus(sender.locked_balance.toString());
-		var totalAmount = new bignum(trs.amount.toString()).plus(trs.fee.toString());
+		var availableBalance = new bignum(sender.balance).minus(sender.locked_balance);
+		var totalAmount = new bignum(trs.amount).plus(trs.fee);
 		if (availableBalance.lessThan(totalAmount)) {
 			var err = [
 				'Account does not have enough SHIFT:', sender.address,
@@ -143,13 +143,11 @@ Lock.prototype.verify = function (trs, sender, cb) {
 
 			return setImmediate(cb, err, trs);
 		});
-	}
-
-	if (trs.type == transactionTypes.UNLOCK) {
-		var availableBalance = new bignum(sender.balance.toString())
-		var unlockAmount = availableBalance.minus(trs.fee.toString()).minus(trs.amount.toString());
+	} else if (trs.type == transactionTypes.UNLOCK) {
+		var availableBalance = new bignum(sender.locked_balance);
+		var unlockAmount = availableBalance.minus(trs.fee).minus(trs.amount);
 		if (unlockAmount.lessThan(0)) {
-			var err = 'You do not have enough SHIFT to perform an unlock request';
+			var err = 'You do not have enough SHIFT to perform this unlock request';
 			return setImmediate(cb, err);
 		}
 
@@ -299,6 +297,32 @@ Lock.prototype.calcUnlockBytes = function (trs, cb) {
 }
 
 /**
+ * Defines the asset values should be positive or negative based on the transaction type
+ * @param {transaction} trs
+ * @return error, lockAmount, lockBytes
+ */
+Pin.prototype.getLock = function (trs, revert) {
+	var err = null, lockAmount, lockBytes;
+
+	if (trs.type == transactionTypes.LOCK) {
+		lockAmount = trs.amount;
+		lockBytes = trs.asset.lock.bytes;
+	} else if (trs.type == transactionTypes.UNLOCK) {
+		lockAmount = trs.amount * -1;
+		lockBytes = trs.asset.lock.bytes * -1;
+	} else {
+		err = 'Not a lock or unlock transaction type';
+	}
+
+	if (revert) {
+		lockAmount *= -1;
+		lockBytes *= -1;
+	}
+
+	return [err, lockAmount, lockBytes];
+}
+
+/**
  * Calls setAccountAndGet based on transaction recipientId and
  * mergeAccountAndGet with unconfirmed trs amount.
  * @implements {modules.accounts.setAccountAndGet}
@@ -311,12 +335,9 @@ Lock.prototype.calcUnlockBytes = function (trs, cb) {
  * @return {setImmediateCallback} error, cb
  */
 Lock.prototype.apply = function (trs, block, sender, cb) {
-	if (trs.type == transactionTypes.LOCK) {
-		var lockAmount = trs.amount;
-		var lockBytes = trs.asset.lock.bytes;
-	} else if (trs.type == transactionTypes.UNLOCK) {
-		var lockAmount = -trs.amount;
-		var lockBytes = -trs.asset.lock.bytes;
+	var [err, lockAmount, lockBytes] = self.getLock(trs, false);
+	if (err) {
+		return setImmediate(cb, err);
 	}
 
 	library.logger.logger.trace('Logic/Lock->apply ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes, height: block.height});
@@ -345,18 +366,15 @@ Lock.prototype.apply = function (trs, block, sender, cb) {
  * @return {setImmediateCallback} error, cb
  */
 Lock.prototype.undo = function (trs, block, sender, cb) {
-	if (trs.type == transactionTypes.LOCK) {
-		var lockAmount = trs.amount;
-		var lockBytes = trs.asset.lock.bytes;
-	} else if (trs.type == transactionTypes.UNLOCK) {
-		var lockAmount = -trs.amount;
-		var lockBytes = -trs.asset.lock.bytes;
+	var [err, lockAmount, lockBytes] = self.getLock(trs, true);
+	if (err) {
+		return setImmediate(cb, err);
 	}
 
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,
-		locked_balance: -lockAmount,
-		locked_bytes: -lockBytes,
+		locked_balance: lockAmount,
+		locked_bytes: lockBytes,
 		blockId: block.id,
 		round: modules.rounds.calc(block.height)
 	}, function (err) {
@@ -370,12 +388,9 @@ Lock.prototype.undo = function (trs, block, sender, cb) {
  * @param {function} cb - Callback function.
  */
 Lock.prototype.applyUnconfirmed = function (trs, sender, cb) {
-	if (trs.type == transactionTypes.LOCK) {
-		var lockAmount = trs.amount;
-		var lockBytes = trs.asset.lock.bytes;
-	} else if (trs.type == transactionTypes.UNLOCK) {
-		var lockAmount = -trs.amount;
-		var lockBytes = -trs.asset.lock.bytes;
+	var [err, lockAmount, lockBytes] = self.getLock(trs, false);
+	if (err) {
+		return setImmediate(cb, err);
 	}
 
 	library.logger.logger.trace('Logic/Lock->applyUnconfirmed ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes, height: block.height});
@@ -397,18 +412,15 @@ Lock.prototype.applyUnconfirmed = function (trs, sender, cb) {
  * @param {function} cb - Callback function.
  */
 Lock.prototype.undoUnconfirmed = function (trs, sender, cb) {
-	if (trs.type == transactionTypes.LOCK) {
-		var lockAmount = trs.amount;
-		var lockBytes = trs.asset.lock.bytes;
-	} else if (trs.type == transactionTypes.UNLOCK) {
-		var lockAmount = -trs.amount;
-		var lockBytes = -trs.asset.lock.bytes;
+	var [err, lockAmount, lockBytes] = self.getLock(trs, true);
+	if (err) {
+		return setImmediate(cb, err);
 	}
 
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,
-		u_locked_balance: -lockAmount,
-		u_locked_bytes: -lockBytes,
+		u_locked_balance: lockAmount,
+		u_locked_bytes: lockBytes,
 		blockId: block.id,
 		round: modules.rounds.calc(block.height)
 	}, function (err) {
