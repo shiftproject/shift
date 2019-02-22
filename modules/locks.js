@@ -17,6 +17,7 @@ var modules, library, self, __private = {}, shared = {};
 
 __private.storagePeers = {};
 __private.assetTypes = {};
+__private.slotStatSaved = null;
 
 /**
  * Initializes library with scope content and generates a Lock instance.
@@ -156,35 +157,28 @@ Locks.prototype.getTotalLockedBytes = function (cb) {
  * @param {function} cb
  * @return {setImmediateCallback} error description | rows data
  */
-Locks.prototype.getClusterStats = function (id, cb) {
-	var ids = [];
-	/*
-	var all = [];
-	for (var i = 1; i <= slots.delegates; i++) {
-		all.push(i); // 1...101
-	}
-	var splice = all.splice(id, slots.delegates - id);
-	var merged = splice.concat(all);
-	for (var i = 0; i < merged.length; i++) {
-		if (merged[i] % constants.blockStatsInterval === 0) {
-			ids.push(merged[i]); // 90...100...10
-		}
-	}
-	*/
-	library.db.query(sql.getClusterStats, {ids: ids.join(), limit: constants.blockStatsInterval}).then(function (rows) {
+Locks.prototype.getClusterStats = function (timestamp, cb) {
+	library.db.query(sql.getClusterStats, {limit: constants.blockStatsInterval}).then(function (rows) {
+		var err = null;
 		var mode_avg = 0;
 		var totals = [];
 		if (rows.length > 0 && rows.length >= constants.blockStatsInterval) {
 			rows.forEach(function(stat){
+				if (timestamp && stat.stats_timestamp < timestamp) {
+					err = 'Not enough recent stats available';
+					return false;
+				}
 				totals.push(stat.latest_cluster_total);
 				// console.log('stat', stat.id, stat.latest_cluster_total);
 			});
 			totals.sort();
 			var middle = Math.ceil(totals.length / 2);
 			var mode_avg = totals[middle];
-		}
 
-		return setImmediate(cb, null, mode_avg);
+			return setImmediate(cb, err, mode_avg);
+		} else {
+			return setImmediate(cb, 'Not enough stats available');
+		}
 	}).catch(function (err) {
 		library.logger.error(err.stack);
 		return setImmediate(cb, 'Locks#getClusterStats error');
@@ -204,11 +198,12 @@ Locks.prototype.setClusterStats = function (cb) {
 	var lastBlock = modules.blocks.lastBlock.get();
 	var lastRound = Math.floor(lastBlock.height / slots.delegates);
 	var slotNumber = lastBlock.height - (lastRound * slots.delegates) + 1;
+	var slotToSave = Math.round(slotNumber / constants.blockStatsInterval) * constants.blockStatsInterval;
 
 	library.logger.trace('Modules/Locks->setClusterStats', {interval: constants.blockStatsInterval, slot: slotNumber});
-	
-	if (slotNumber % constants.blockStatsInterval !== 0) {
-		cb();
+
+	if (__private.slotStatSaved == lastRound + '.' + slotToSave) {
+		return cb();
 	} else {
 		// ToDo: Get actual blockchain data
 		var locked_balance = 0; // self.getTotalLockedBalance();
@@ -257,7 +252,7 @@ Locks.prototype.setClusterStats = function (cb) {
 			try {
 				var cluster = JSON.parse(res.body);
 				var stats = {
-					id: slotNumber,
+					id: slotToSave,
 					locked_balance: locked_balance,
 					unlocked_balance: unlocked_balance,
 					locked_bytes: locked_bytes,
@@ -274,6 +269,7 @@ Locks.prototype.setClusterStats = function (cb) {
 
 			// Save stats result
 			library.db.query(sql.setClusterStats, stats).then(function () {
+				__private.slotStatSaved = lastRound + '.' + slotToSave;
 				library.logger.log('Saved stats to memtable', peer.ip + ':' + res.body);
 				return setImmediate(cb, null);
 			}).catch(function (err) {
@@ -318,7 +314,7 @@ __private.removePeer = function(ip) {
 				break;
 			}
 		}
-		if (remove) {
+		if (remove !== false) {
 			library.logger.info('Remove bad storage peer from list', ip);
 			__private.storagePeers.splice(remove, 1);
 		}

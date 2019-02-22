@@ -301,7 +301,7 @@ Lock.prototype.calcUnlockBytes = function (trs, cb) {
  * @param {transaction} trs
  * @return error, lockAmount, lockBytes
  */
-Pin.prototype.getLock = function (trs, revert) {
+Lock.prototype.getLock = function (trs, revert) {
 	var err = null, lockAmount, lockBytes;
 
 	if (trs.type == transactionTypes.LOCK) {
