@@ -205,83 +205,103 @@ Locks.prototype.setClusterStats = function (cb) {
 	if (__private.slotStatSaved == lastRound + '.' + slotToSave) {
 		return cb();
 	} else {
-		// ToDo: Get actual blockchain data
-		var locked_balance = 0; // self.getTotalLockedBalance();
-		var unlocked_balance = 0;
-		var locked_bytes = 0; // self.getTotalLockedBytes();
-		var unlocked_bytes = 0;
-
-		// Storage cluster
-		var peer = __private.storagePeers[Math.floor(Math.random() * __private.storagePeers.length)];
-		if (peer === undefined || peer.length === 0) {
-			return setImmediate(cb, 'No storage peers found');
-		}
-
-		var url = '/stats';
-		var req = {
-			url: 'http://' + peer.ip + (peer.port && peer.port != 80 ? ':' + peer.port : '') + url,
-			method: 'get',
-			timeout: library.config.storage.options.timeout
-		};
-
-		popsicle.request(req).then(function (res) {
-			if (res.status !== 200) {
-				__private.removePeer(peer.ip);
-
-				return setImmediate(cb, ['Received bad response from cluster', res.status, req.method, req.url].join(' '));
-			}
-
-			// Populate peer list, every X times we come here
-			var lookupPerIterations = 3;
-			var randomNum = Math.ceil(Math.random() * lookupPerIterations);
-			if (randomNum === lookupPerIterations) {
-				req.url = req.url.replace(new RegExp(url), "/peers");
-				popsicle.request(req).then(function (result) {
-					if (result.status === 200) {
-						try {
-							var rows = JSON.parse(result.body);
-							for (var i = 0, row; row = rows[i]; i++) {
-								__private.addPeer(row.Host, row.Port);
-							}
-						} catch(err) {}
+		async.series({
+			lockedBalance: function (seriesCb) {
+				self.getTotalLockedBalance(function (err, balance) {
+					if (err) {
+						return setImmediate(seriesCb, err);
+					} else {
+						return setImmediate(seriesCb, null, balance);
 					}
 				});
-			}
+			},
+			lockedBytes: function (seriesCb) {
+				self.getTotalLockedBytes(function (err, bytes) {
+					if (err) {
+						return setImmediate(seriesCb, err);
+					} else {
+						return setImmediate(seriesCb, null, bytes);
+					}
+				});
+			},
+			clusterStats: function (seriesCb) {
+				// Storage cluster
+				var peer = __private.storagePeers[Math.floor(Math.random() * __private.storagePeers.length)];
+				if (peer === undefined || peer.length === 0) {
+					return setImmediate(seriesCb, 'No storage peers found');
+				}
 
-			// Parse stats result
-			try {
-				var cluster = JSON.parse(res.body);
+				var url = '/stats';
+				var req = {
+					url: 'http://' + peer.ip + (peer.port && peer.port != 80 ? ':' + peer.port : '') + url,
+					method: 'get',
+					timeout: library.config.storage.options.timeout
+				};
+
+				popsicle.request(req).then(function (res) {
+					if (res.status !== 200) {
+						__private.removePeer(peer.ip);
+
+						return setImmediate(seriesCb, ['Received bad response from cluster', res.status, req.method, req.url].join(' '));
+					}
+
+					// Populate peer list, every X times we come here
+					var lookupPerIterations = 3;
+					var randomNum = Math.ceil(Math.random() * lookupPerIterations);
+					if (randomNum === lookupPerIterations) {
+						req.url = req.url.replace(new RegExp(url), "/peers");
+						popsicle.request(req).then(function (result) {
+							if (result.status === 200) {
+								try {
+									var rows = JSON.parse(result.body);
+									for (var i = 0, row; row = rows[i]; i++) {
+										__private.addPeer(row.Host, row.Port);
+									}
+								} catch(err) {}
+							}
+						});
+					}
+
+					// Parse stats result
+					try {
+						var cluster = JSON.parse(res.body);
+						return setImmediate(seriesCb, null, cluster);
+					} catch(err) {
+						return setImmediate(seriesCb, 'Error parsing cluster response');
+					};
+				}).catch(function (err) {
+					if (peer !== undefined) {
+						__private.removePeer(peer.ip);
+					}
+
+					return setImmediate(seriesCb, [err.code, 'Request failed', req.method, req.url].join(' '));
+				});
+			}
+		}, function (err, results) {
+			if (err) {
+				return setImmediate(cb, err);
+			} else {
 				var stats = {
 					id: slotToSave,
-					locked_balance: locked_balance,
-					unlocked_balance: unlocked_balance,
-					locked_bytes: locked_bytes,
-					unlocked_bytes: unlocked_bytes,
-					total_bytes: cluster.TotalStorage,
-					used_bytes: cluster.UsedStorage,
+					locked_balance: results.lockedBalance,
+					locked_bytes: results.lockedBytes,
+					total_bytes: results.clusterStats.TotalStorage,
+					used_bytes: results.clusterStats.UsedStorage,
 					timestamp: slots.getTime() // getRealTime?
 				};
-			} catch(err) {
-				return setImmediate(cb, 'Error parsing cluster response');
-			};
 
-			// Todo: Add input validation?
+				// Todo: Add input validation?
 
-			// Save stats result
-			library.db.query(sql.setClusterStats, stats).then(function () {
-				__private.slotStatSaved = lastRound + '.' + slotToSave;
-				library.logger.log('Saved stats to memtable', peer.ip + ':' + res.body);
-				return setImmediate(cb, null);
-			}).catch(function (err) {
-				library.logger.error(err.stack);
-				return setImmediate(cb, 'Locks#setClusterStats error');
-			});
-		}).catch(function (err) {
-			if (peer !== undefined) {
-				__private.removePeer(peer.ip);
+				// Save stats
+				library.db.query(sql.setClusterStats, stats).then(function () {
+					__private.slotStatSaved = lastRound + '.' + slotToSave;
+					library.logger.log('Saved stats to memtable' + ':' + JSON.stringify(stats));
+					return setImmediate(cb, null);
+				}).catch(function (err) {
+					library.logger.error(err.stack);
+					return setImmediate(cb, 'Locks#setClusterStats error');
+				});
 			}
-
-			return setImmediate(cb, [err.code, 'Request failed', req.method, req.url].join(' '));
 		});
 	}
 }
@@ -514,7 +534,7 @@ Locks.prototype.shared = {
 			};
 		}
 
-		self.getTotalLockedBalance(function (err, bytes) {
+		self.getTotalLockedBalance(function (err, balance) {
 			if (err) {
 				return setImmediate(cb, err);
 			}
