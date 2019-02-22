@@ -466,24 +466,14 @@ Lock.prototype.objectNormalize = function (trs) {
  * @return {null|lock} lock object
  */
 Lock.prototype.dbRead = function (raw) {
-//	console.log('dbRead raw', raw);
-
 	if (!raw.l_bytes) {
 		return null;
 	} else {
 		var data = {
-//			amount: raw.t_amount,
-			bytes: Math.round(raw.l_bytes),
-//			publicKey: raw.t_senderPublicKey,
-//			address: raw.t_senderId
+			bytes: Math.round(raw.l_bytes)
 		};
-/*
-		if (raw.t_type == transactionTypes.LOCK) {
-			return {lock: data};
-		} else if (raw.t_type == transactionTypes.UNLOCK) {
-			return {unlock: data};
-		}
-*/		return {lock: data};
+
+		return {lock: data};
 	}
 };
 

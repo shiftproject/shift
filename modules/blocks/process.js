@@ -344,7 +344,7 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 			// Get size from memtable to add to block
 			modules.locks.getClusterStats(null, function (err, totalBytes) {
 				if (err) {
-					return setImmediate(cb, err);
+					createBlock(null, cb);
 				}
 
 				createBlock(totalBytes, cb);

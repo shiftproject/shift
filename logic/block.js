@@ -116,6 +116,7 @@ Block.prototype.create = function (data) {
 		totalAmount: totalAmount,
 		totalFee: totalFee,
 		reward: reward,
+		clusterSize: version == 0 ? null : (data.clusterSize ? parseInt(data.clusterSize) : 0),		
 		payloadHash: payloadHash.digest().toString('hex'),
 		timestamp: data.timestamp,
 		numberOfTransactions: blockTransactions.length,
@@ -124,11 +125,6 @@ Block.prototype.create = function (data) {
 		generatorPublicKey: data.keypair.publicKey.toString('hex'),
 		transactions: blockTransactions
 	};
-
-	// Add network stats to block
-	if (version === 1) {
-		block.clusterSize = data.hasOwnProperty('clusterSize') ? parseInt(data.clusterSize) : 0;
-	}
 
 	try {
 		block.blockSignature = this.sign(block, data.keypair);
@@ -188,7 +184,7 @@ Block.prototype.getBytes = function (block) {
 		bb.writeLong(block.totalFee);
 		bb.writeLong(block.reward);
 
-		if (block.version === 1 && block.hasOwnProperty('clusterSize')) {
+		if (block.version === 1 && block.clusterSize) {
 			bb.writeLong(block.clusterSize);
 		}
 
@@ -299,18 +295,13 @@ Block.prototype.dbSave = function (block) {
 			totalAmount: block.totalAmount,
 			totalFee: block.totalFee,
 			reward: block.reward || 0,
+			clusterSize: block.version == 0 ? null : (block.clusterSize ? parseInt(block.clusterSize) : 0),
 			payloadLength: block.payloadLength,
 			payloadHash: payloadHash,
 			generatorPublicKey: generatorPublicKey,
 			blockSignature: blockSignature
 		}
 	};
-	if (db.values.version == 1) {
-		if (db.fields.indexOf('clusterSize') == -1) {
-			db.fields.push('clusterSize');
-		}
-		db.values.clusterSize = block.hasOwnProperty('clusterSize') ? parseInt(block.clusterSize) : 0;
-	}
 
 	return db;
 };
@@ -489,6 +480,7 @@ Block.prototype.dbRead = function (raw) {
 			totalAmount: parseInt(raw.b_totalAmount),
 			totalFee: parseInt(raw.b_totalFee),
 			reward: parseInt(raw.b_reward),
+			clusterSize: block.version == 0 ? null : (raw.b_clusterSize ? parseInt(raw.b_clusterSize) : 0),	
 			payloadLength: parseInt(raw.b_payloadLength),
 			payloadHash: raw.b_payloadHash,
 			generatorPublicKey: raw.b_generatorPublicKey,
@@ -496,9 +488,7 @@ Block.prototype.dbRead = function (raw) {
 			blockSignature: raw.b_blockSignature,
 			confirmations: parseInt(raw.b_confirmations)
 		};
-		if (block.version == 1) {
-			block.clusterSize = raw.hasOwnProperty('b_clusterSize') ? parseInt(raw.b_clusterSize) : 0;
-		}
+
 		block.totalForged = new bignum(block.totalFee).plus(new bignum(block.reward)).toString();
 
 		return block;

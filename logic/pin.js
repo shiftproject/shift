@@ -282,7 +282,6 @@ Pin.prototype.applyUnconfirmed = function (trs, sender, cb) {
 	}
 
 	library.logger.logger.trace('Logic/Pin->apply ' + (trs.type == 10 ? 'pin' : 'unpin'), {sender: trs.senderId, bytes: pinBytes, height: block.height});
-	console.log('Debug storage '+ (trs.type == 10 ? 'pin' : 'unpin') +' applyUnconfirmed', trs.senderId, pinBytes, block.height);
 
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,

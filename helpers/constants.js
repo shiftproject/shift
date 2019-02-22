@@ -14,12 +14,17 @@
  * @property {number} confirmationLength
  * @property {Date} epochTime
  * @property {object} fees - The default values for fees.
+ * @property {number[]} fees.height
  * @property {number} fees.send
  * @property {number} fees.vote
  * @property {number} fees.secondsignature
  * @property {number} fees.delegate
  * @property {number} fees.multisignature
  * @property {number} fees.dapp
+ * @property {number} fees.lock
+ * @property {number} fees.unlock
+ * @property {number} fees.pin
+ * @property {number} fees.unpin
  * @property {number} feeStart
  * @property {number} feeStartVolume
  * @property {number} fixedPoint
@@ -40,6 +45,11 @@
  * @property {number[]} rewards.milestones - Initial 5, and decreasing until 1.
  * @property {number} rewards.offset - Start rewards at block (n).
  * @property {number} rewards.distance - Distance between each milestone
+ * @property {object} locks
+ * @property {number[]} locks.height
+ * @property {number} locks.replication - The amount of locations the cluster will pin the data to.
+ * @property {number} locks.ratio_factor - Used to tune the shift-to-bytes ratio
+ * @property {number} locks.tolerance - Percentage used to accept slight differences in what the sum of locks would ask, and what the network has available.
  * @property {number} signatureLength
  * @property {number} totalAmount
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks

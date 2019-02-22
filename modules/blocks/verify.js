@@ -375,7 +375,7 @@ __private.verifyBlockSlotWindow = function (block, result) {
  * @return {Array}   result.errors Array of validation errors
  */
 Verify.prototype.verifyReceipt = function (block) {
-	var lastBlock = modules.blocks.lastBlock.get();
+//	var lastBlock = modules.blocks.lastBlock.get();
 
 //	block = __private.setHeight(block, lastBlock);
 
@@ -494,17 +494,22 @@ Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateS
 			return setImmediate(seriesCb);
 		},
 		verifyClusterSize: function (seriesCb) {
-			if (constants.blockStatsInterval >= constants.blockSlotWindow) {
-				// TODO: check timestamps of stats records
-				modules.locks.getClusterStats(null, function (err, totalBytes) {
+			if (block.clusterSize && constants.blockStatsInterval >= constants.blockSlotWindow) {
+				var blockSlotNumber = slots.getSlotNumber(block.timestamp) - 1;
+				var blockSlotTime = slots.getSlotTime(blockSlotNumber > constants.activeDelegates ? blockSlotNumber - constants.activeDelegates : constants.activeDelegates);
+
+				modules.locks.getClusterStats(blockSlotTime, function (err, totalBytes) {
+					// Skip checking if there are not enough recent stats available
 					if (err) {
-						return setImmediate(seriesCb); // Could not get cluster size -> pass check
+						return setImmediate(seriesCb);
 					}
 
+					// Fork: cluster size of block does not match cluster size of stats
 					if (totalBytes != block.clusterSize) {
+						modules.delegates.fork(block, 6);
 						return setImmediate(seriesCb, 'Unexpected cluster size');
 					}
-					
+
 					return setImmediate(seriesCb);
 				});
 			} else {
