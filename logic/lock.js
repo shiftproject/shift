@@ -340,7 +340,7 @@ Lock.prototype.apply = function (trs, block, sender, cb) {
 		return setImmediate(cb, err);
 	}
 
-	library.logger.logger.trace('Logic/Lock->apply ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes, height: block.height});
+	library.logger.trace('Logic/Lock->apply ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes, height: block.height});
 
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,
@@ -393,7 +393,7 @@ Lock.prototype.applyUnconfirmed = function (trs, sender, cb) {
 		return setImmediate(cb, err);
 	}
 
-	library.logger.logger.trace('Logic/Lock->applyUnconfirmed ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes, height: block.height});
+	library.logger.trace('Logic/Lock->applyUnconfirmed ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes, height: block.height});
 
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,

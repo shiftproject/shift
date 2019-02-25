@@ -338,6 +338,11 @@ __private.removePeer = function(ip) {
 			library.logger.info('Remove bad storage peer from list', ip);
 			__private.storagePeers.splice(remove, 1);
 		}
+
+		// Reset to bootstrap peers
+		if (__private.storagePeers.length === 0){
+			__private.storagePeers = library.config.storage.peers;
+		}		
 	}
 }
 
