@@ -202,7 +202,7 @@ Locks.prototype.setClusterStats = function (cb) {
 
 	library.logger.trace('Modules/Locks->setClusterStats', {interval: constants.blockStatsInterval, slot: slotNumber});
 
-	if (__private.slotStatSaved == lastRound + '.' + slotToSave) {
+	if (slotToSave == 0 || __private.slotStatSaved == lastRound + '.' + slotToSave) {
 		return cb();
 	} else {
 		async.series({
@@ -342,7 +342,7 @@ __private.removePeer = function(ip) {
 		// Reset to bootstrap peers
 		if (__private.storagePeers.length === 0){
 			__private.storagePeers = library.config.storage.peers;
-		}		
+		}
 	}
 }
 
@@ -518,6 +518,24 @@ Locks.prototype.shared = {
 
 		});
 	},
+	calcLockBytes: function (req, cb) {
+		library.schema.validate(req.body, schema.calcLockBytes, function (err) {
+			if (err) {
+				return setImmediate(cb, err[0].message);
+			}
+
+			var lastBlock = modules.blocks.lastBlock.get();
+			__private.lock.calcLockBytes(lastBlock.height, req.body.amount, function(err, result) {
+				if (err) {
+					return setImmediate(cb, err);
+				}
+
+				var lockBytes = Math.round(result);
+
+				return setImmediate(cb, null, {bytes: (lockBytes || 0)});
+			});
+		});
+	},
 	getLockedBalance: function (req, cb) {
 		library.schema.validate(req.body, schema.getLockedBalance, function (err) {
 			if (err) {
@@ -533,12 +551,6 @@ Locks.prototype.shared = {
 		});
 	},
 	getTotalLockedBalance: function (req, cb) {
-		if (!req || !req.hasOwnProperty('body')) {
-			var req = {
-				body: {}
-			};
-		}
-
 		self.getTotalLockedBalance(function (err, balance) {
 			if (err) {
 				return setImmediate(cb, err);
@@ -562,12 +574,6 @@ Locks.prototype.shared = {
 		});
 	},
 	getTotalLockedBytes: function (req, cb) {
-		if (!req || !req.hasOwnProperty('body')) {
-			var req = {
-				body: {}
-			};
-		}
-
 		self.getTotalLockedBytes(function (err, bytes) {
 			if (err) {
 				return setImmediate(cb, err);
@@ -577,13 +583,7 @@ Locks.prototype.shared = {
 		});
 	},
 	getClusterStats: function (req, cb) {
-		if (!req || !req.hasOwnProperty('body')) {
-			var req = {
-				body: {}
-			};
-		}
-
-		library.schema.validate(req.body, schema.getClusterStats, function (err) {
+		library.schema.validate(req.body || {}, schema.getClusterStats, function (err) {
 			if (err) {
 				return setImmediate(cb, err[0].message);
 			}
@@ -592,7 +592,7 @@ Locks.prototype.shared = {
 					return setImmediate(cb, err);
 				}
 
-				return setImmediate(cb, null, { stats: !stats ? 0 : stats });
+				return setImmediate(cb, null, { stats: (stats || 0) });
 			});
 		});
 	}

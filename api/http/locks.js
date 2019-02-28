@@ -8,6 +8,7 @@ var httpApi = require('../../helpers/httpApi');
  * - End point: `/api/locks`
  * - Public API:
  * 	- get	/fee
+ * 	- get	/calcBytes
  * 	- get	/balance
  * 	- get	/bytes
  * 	- get	/totalBytes
@@ -25,10 +26,11 @@ function LocksHttpApi (locksModule, app, logger, cache) {
 	var router = new Router();
 
 	// attach a middlware to endpoints
-	router.attachMiddlwareForUrls(httpApi.middleware.useCache.bind(null, logger, cache), []);
+	router.attachMiddlewareForUrls(httpApi.middleware.useCache.bind(null, logger, cache), []);
 
 	router.map(locksModule.shared, {
 		'get /fee': 'getFee',
+		'get /calcBytes': 'calcLockBytes',
 		'get /balance': 'getLockedBalance',
 		'get /bytes': 'getLockedBytes',
 		'get /totalBytes': 'getTotalLockedBytes',

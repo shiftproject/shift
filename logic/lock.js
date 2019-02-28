@@ -119,8 +119,6 @@ Lock.prototype.verify = function (trs, sender, cb) {
 		return setImmediate(cb, 'Invalid transaction asset');
 	}
 
-	// ToDo: verify asset.bytes against self.lockBytes (using tolerance)
-
 	if (trs.type == transactionTypes.LOCK) {
 		var availableBalance = new bignum(sender.balance).minus(sender.locked_balance);
 		var totalAmount = new bignum(trs.amount).plus(trs.fee);
@@ -138,8 +136,12 @@ Lock.prototype.verify = function (trs, sender, cb) {
 			if (err) {
 				return cb('CalcLockedBytes error: ' + err);
 			}
-
+		
 			self.lockBytes = Math.round(result);
+
+			if (self.lockBytes < trs.asset.lock.bytes) {
+				return setImmediate(cb, 'Bytes in transaction (' +trs.asset.lock.bytes+ ') exceed calculated bytes (' +self.lockBytes+ ')');			
+			}
 
 			return setImmediate(cb, err, trs);
 		});
@@ -151,7 +153,7 @@ Lock.prototype.verify = function (trs, sender, cb) {
 			return setImmediate(cb, err);
 		}
 
-		var publicKey = trs.senderPublicKey; //Buffer.from(sender.publicKey, 'hex');
+		var publicKey = trs.senderPublicKey;
 		self.calcUnlockBytes(trs, function (err, result) {
 			if (err || !result) {
 				return cb('calcUnlockBytes error: ' + err);
@@ -208,9 +210,9 @@ Lock.prototype.getBytes = function (trs) {
 
 		var byteBuf = new ByteBuffer(8, true);
 		byteBuf.writeUint64(trs.asset.lock.bytes, 0);
-		byteBuf.flip();
+		var arrayBuf = Buffer.from(new Uint8Array(byteBuf.toArrayBuffer()));
 
-		buf = Buffer.concat([buf, byteBuf.toBuffer()]);
+		buf = Buffer.concat([buf, arrayBuf]);
 	} catch (e) {
 		throw e;
 	}
@@ -239,25 +241,35 @@ Lock.prototype.calcLockBytes = function (height, amount, cb) {
 			return setImmediate(cb, err);
 		}
 
+		totalLockedBytes = new bignum(totalLockedBytes).toNumber();
+
 		var lastBlock = modules.blocks.lastBlock.get();
 		var replication = lockSettings.locks[lockSettings.calcMilestone(lastBlock.height)].replication;
-		totalLockedBytes = totalLockedBytes * replication;
 
 		modules.locks.getClusterStats(null, function (err, totalBytes) {
-			if (err/* || !totalLockedBytes*/) {
-				return setImmediate(cb, "Total is 0");
+			if (err) {
+				return setImmediate(cb, "Total bytes is 0");
 			}
 
-			var freeBytes = (totalBytes - (totalBytes / tolerance)) - totalLockedBytes;
+			totalBytes = new bignum(totalBytes).toNumber();
 
+			// Total minus used is available (10% buffer)
+			var freeBytes = (totalBytes - (totalBytes / tolerance)) - totalLockedBytes;
+			if (freeBytes <= 0) {
+				return setImmediate(cb, "No free bytes available");
+			}
+
+			// The actual amount to bytes calculation. Make sure to mind the replication.
 			if (totalLockedBytes > 0) {
 				var lockBytes = amount / (compensationFactor * (totalLockedBytes / freeBytes) * ratioFactor);
 			} else {
 				var lockBytes = amount / (compensationFactor * ratioFactor);
 			}
 
-			// ToDo 1. freeBytes must be greater than 0
-			// ToDo 2. totalLockedBytes + lockBytes cannot be greater than freeBytes
+			var available = freeBytes - lockBytes;
+			if (available < 0) {
+				return setImmediate(cb, "Not enough free bytes available: " + (available * -1));
+			}
 
 			return setImmediate(cb, null, lockBytes);
 		});
@@ -371,6 +383,7 @@ Lock.prototype.undo = function (trs, block, sender, cb) {
 		return setImmediate(cb, err);
 	}
 
+
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,
 		locked_balance: lockAmount,
@@ -393,14 +406,12 @@ Lock.prototype.applyUnconfirmed = function (trs, sender, cb) {
 		return setImmediate(cb, err);
 	}
 
-	library.logger.trace('Logic/Lock->applyUnconfirmed ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes, height: block.height});
+	library.logger.trace('Logic/Lock->applyUnconfirmed ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes});
 
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,
 		u_locked_balance: lockAmount,
-		u_locked_bytes: lockBytes,
-		blockId: block.id,
-		round: modules.rounds.calc(block.height)
+		u_locked_bytes: lockBytes
 	}, function (err) {
 		return setImmediate(cb, err);
 	});
@@ -420,9 +431,7 @@ Lock.prototype.undoUnconfirmed = function (trs, sender, cb) {
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,
 		u_locked_balance: lockAmount,
-		u_locked_bytes: lockBytes,
-		blockId: block.id,
-		round: modules.rounds.calc(block.height)
+		u_locked_bytes: lockBytes
 	}, function (err) {
 		return setImmediate(cb, err);
 	});

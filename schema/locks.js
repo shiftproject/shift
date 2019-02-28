@@ -1,5 +1,7 @@
 'use strict';
 
+var constants = require('../helpers/constants.js');
+
 module.exports = {
 	getFee: {
 		id: 'locks.getFee',
@@ -10,6 +12,18 @@ module.exports = {
 				minimum: 1
 			}
 		}
+	},
+	calcLockBytes: {
+		id: 'locks.calcLockBytes',
+		type: 'object',
+		properties: {
+			amount: {
+				type: 'integer',
+				minimum: 0,
+				maximum: constants.fixedPoint
+			}
+		},
+		required: ['amount']
 	},
 	getLockedBalance: {
 		id: 'locks.getLockedBalance',
