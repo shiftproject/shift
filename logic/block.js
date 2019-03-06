@@ -480,7 +480,7 @@ Block.prototype.dbRead = function (raw) {
 			totalAmount: parseInt(raw.b_totalAmount),
 			totalFee: parseInt(raw.b_totalFee),
 			reward: parseInt(raw.b_reward),
-			clusterSize: block.version == 0 ? null : (raw.b_clusterSize ? parseInt(raw.b_clusterSize) : 0),	
+			clusterSize: raw.b_version === 0 ? null : (raw.b_clusterSize ? parseInt(raw.b_clusterSize) : 0),	
 			payloadLength: parseInt(raw.b_payloadLength),
 			payloadHash: raw.b_payloadHash,
 			generatorPublicKey: raw.b_generatorPublicKey,

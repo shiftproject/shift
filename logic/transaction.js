@@ -881,9 +881,9 @@ Transaction.prototype.applyUnconfirmed = function (trs, sender, requester, cb) {
 
 	// Unlock should always have a negative amount
 	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
-		var amount = new bignum(trs.amount.mul(-1).plus(trs.fee.toNumber();
+		var amount = new bignum(trs.amount.toString()).mul(-1).plus(trs.fee.toString()).toNumber();
 	} else {
-		var amount = new bignum(trs.amount.plus(trs.fee.toNumber();
+		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
 	}
 
 	// Check unconfirmed sender balance
@@ -923,9 +923,9 @@ Transaction.prototype.applyUnconfirmed = function (trs, sender, requester, cb) {
  */
 Transaction.prototype.undoUnconfirmed = function (trs, sender, cb) {
 	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
-		var amount = new bignum(trs.amount.mul(-1).plus(trs.fee.toNumber();
+		var amount = new bignum(trs.amount.toString()).mul(-1).plus(trs.fee.toString()).toNumber();
 	} else {
-		var amount = new bignum(trs.amount.plus(trs.fee.toNumber();
+		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
 	}
 
 	this.scope.account.merge(sender.address, {u_balance: amount}, function (err, sender) {
