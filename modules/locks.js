@@ -536,6 +536,27 @@ Locks.prototype.shared = {
 			});
 		});
 	},
+	calcUnlockBytes: function (req, cb) {
+		library.schema.validate(req.body, schema.calcUnlockBytes, function (err) {
+			if (err) {
+				return setImmediate(cb, err[0].message);
+			}
+
+			var transaction = {
+				senderPublicKey: req.body.publicKey, 
+				amount: req.body.amount
+			};
+			__private.lock.calcUnlockBytes(transaction, function(err, result) {
+				if (err) {
+					return setImmediate(cb, err);
+				}
+
+				var unlockBytes = Math.round(result);
+
+				return setImmediate(cb, null, {bytes: (unlockBytes || 0)});
+			});
+		});
+	},
 	getLockedBalance: function (req, cb) {
 		library.schema.validate(req.body, schema.getLockedBalance, function (err) {
 			if (err) {

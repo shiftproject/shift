@@ -8,7 +8,8 @@ var httpApi = require('../../helpers/httpApi');
  * - End point: `/api/locks`
  * - Public API:
  * 	- get	/fee
- * 	- get	/calcBytes
+ * 	- get	/calcLock
+ * 	- get	/calcUnlock
  * 	- get	/balance
  * 	- get	/bytes
  * 	- get	/totalBytes
@@ -30,11 +31,12 @@ function LocksHttpApi (locksModule, app, logger, cache) {
 
 	router.map(locksModule.shared, {
 		'get /fee': 'getFee',
-		'get /calcBytes': 'calcLockBytes',
+		'get /calcLock': 'calcLockBytes',
+		'get /calcUnlock': 'calcUnlockBytes',
 		'get /balance': 'getLockedBalance',
 		'get /bytes': 'getLockedBytes',
 		'get /totalBytes': 'getTotalLockedBytes',
-		'get /clusterStats': 'getClusterStats'	
+		'get /clusterStats': 'getClusterStats'
 	});
 
 	httpApi.registerEndpoint('/api/locks', app, router, locksModule.isLoaded);

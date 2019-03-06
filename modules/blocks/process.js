@@ -344,7 +344,7 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 			// Get size from memtable to add to block
 			modules.locks.getClusterStats(null, function (err, totalBytes) {
 				if (err) {
-					createBlock(null, cb);
+					return setImmediate(cb, 'Unable to forge because of incomplete cluster stats');
 				}
 
 				createBlock(totalBytes, cb);

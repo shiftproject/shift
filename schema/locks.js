@@ -20,10 +20,26 @@ module.exports = {
 			amount: {
 				type: 'integer',
 				minimum: 0,
-				maximum: constants.fixedPoint
+//				maximum: constants.fixedPoint
 			}
 		},
 		required: ['amount']
+	},
+	calcUnlockBytes: {
+		id: 'locks.calcUnlockBytes',
+		type: 'object',
+		properties: {
+			publicKey: {
+				type: 'string',
+				format: 'publicKey'
+			},
+			amount: {
+				type: 'integer',
+				minimum: 0,
+//				maximum: constants.fixedPoint
+			}
+		},
+		required: ['publicKey', 'amount']
 	},
 	getLockedBalance: {
 		id: 'locks.getLockedBalance',

@@ -111,7 +111,7 @@ Pin.prototype.verify = function (trs, sender, cb) {
 
 		if (trs.type === transactionTypes.PIN) {
 			if (mostRecentPin && mostRecentPin.type === transactionTypes.PIN) {
-				return setImmediate(cb, "Can not pin an asset you have already pinned");
+				return setImmediate(cb, "Can not pin a hash you have already pinned");
 			}
 
 			var publicKey = trs.senderPublicKey;
@@ -126,20 +126,17 @@ Pin.prototype.verify = function (trs, sender, cb) {
 						var err = 'Not enough locked bytes available';
 					}
 
-					// ToDo: check available space: total_free_bytes = [buffer_constant(=0.9) * total_storage] - total_pinned_bytes
-/*					if (true) {
-						var err = 'Not enough space available at the network';
-						return setImmediate(cb, err);
-					}
-*/
 					return setImmediate(cb, err, trs);
 				});
 			});
-		}
-
-		if (trs.type === transactionTypes.UNPIN) {
+		} else if (trs.type === transactionTypes.UNPIN) {
 			if (!mostRecentPin || mostRecentPin.type !== transactionTypes.PIN) {
 				return setImmediate(cb, "Can not unpin an asset you have not pinned");
+			}
+
+			var pinnedBytes = new bignum(mostRecentPin.bytes).toNumber();
+			if (pinnedBytes !== trs.asset.pin.bytes) {
+				return setImmediate(cb, "Incorrect number of bytes to unpin");
 			}
 
 			return setImmediate(cb, null, trs);
@@ -172,9 +169,9 @@ Pin.prototype.getBytes = function (trs) {
 
 		var byteBuf = new ByteBuffer(8, true);
 		byteBuf.writeUint64(trs.asset.pin.bytes, 0);
-		byteBuf.flip();
+		var arrayBuf = Buffer.from(new Uint8Array(byteBuf.toArrayBuffer()));
 		
-		buf = Buffer.concat([buf, byteBuf.toBuffer()]);		
+		buf = Buffer.concat([buf, arrayBuf]);
 	} catch (e) {
 		throw e;
 	}
@@ -281,13 +278,11 @@ Pin.prototype.applyUnconfirmed = function (trs, sender, cb) {
 		return setImmediate(cb, err);
 	}
 
-	library.logger.trace('Logic/Pin->apply ' + (trs.type == 10 ? 'pin' : 'unpin'), {sender: trs.senderId, bytes: pinBytes, height: block.height});
+	library.logger.trace('Logic/Pin->apply ' + (trs.type == 10 ? 'pin' : 'unpin'), {sender: trs.senderId, bytes: pinBytes});
 
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,
-		u_pinned_bytes: pinBytes,
-		blockId: block.id,
-		round: modules.rounds.calc(block.height)
+		u_pinned_bytes: pinBytes
 	}, function (err) {
 		return setImmediate(cb, err);
 	});
@@ -312,9 +307,7 @@ Pin.prototype.undoUnconfirmed = function (trs, sender, cb) {
 
 		modules.accounts.mergeAccountAndGet({
 			address: trs.senderId,
-			u_pinned_bytes: pinBytes,
-			blockId: block.id,
-			round: modules.rounds.calc(block.height)
+			u_pinned_bytes: pinBytes
 		}, function (err) {
 			return setImmediate(cb, err);
 		});

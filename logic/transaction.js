@@ -353,14 +353,14 @@ Transaction.prototype.checkConfirmed = function (trs, cb) {
  * @returns {Object} With exceeded boolean and error: address, balance
  */
 Transaction.prototype.checkBalance = function (amount, balance, trs, sender) {
-	var exceededBalance = new bignum(sender[balance]).lessThan(amount);
+	var exceededBalance = new bignum(sender[balance].toString()).lessThan(amount);
 	var exceeded = (trs.blockId !== this.scope.genesisblock.block.id && exceededBalance);
 	var err;
 
 	if (exceeded)	{
 		err = [
 			'Account does not have enough SHIFT:', sender.address,
-			'balance:', new bignum(sender[balance] || '0').div(Math.pow(10,8))
+			'balance:', new bignum(sender[balance].toString() || '0').div(Math.pow(10,8))
 		].join(' ');
 
 		if (exceptions.balance.indexOf(trs.id) > -1) {
@@ -638,7 +638,7 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 	}
 
 	// Check confirmed sender balance
-	var amount = new bignum(trs.amount).plus(trs.fee);
+	var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
 	var senderBalance = this.checkBalance(amount, 'balance', trs, sender);
 
 	if (senderBalance.exceeded) {
@@ -771,9 +771,9 @@ Transaction.prototype.apply = function (trs, block, sender, cb) {
 
 	// Unlock should always have a negative amount
 	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
-		var amount = new bignum(trs.amount).mul(-1).plus(trs.fee).toNumber();
+		var amount = new bignum(trs.amount.toString()).mul(-1).plus(trs.fee.toString()).toNumber();
 	} else {
-		var amount = new bignum(trs.amount).plus(trs.fee).toNumber();
+		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
 	}
 
 	// Check confirmed sender balance
@@ -826,9 +826,9 @@ Transaction.prototype.apply = function (trs, block, sender, cb) {
 Transaction.prototype.undo = function (trs, block, sender, cb) {
 	// Unlock should always have a negative amount
 	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
-		var amount = new bignum(trs.amount.mul(-1).plus(trs.fee.toNumber();
+		var amount = new bignum(trs.amount.toString()).mul(-1).plus(trs.fee.toString()).toNumber();
 	} else {
-		var amount = new bignum(trs.amount.plus(trs.fee.toNumber();
+		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
 	}
 
 	this.scope.logger.trace('Logic/Transaction->undo', {sender: sender.address, balance: amount, blockId: block.id, round: modules.rounds.calc(block.height)});
