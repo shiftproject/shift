@@ -542,11 +542,10 @@ Locks.prototype.shared = {
 				return setImmediate(cb, err[0].message);
 			}
 
-			var transaction = {
+			__private.lock.calcUnlockBytes({
 				senderPublicKey: req.body.publicKey, 
 				amount: req.body.amount
-			};
-			__private.lock.calcUnlockBytes(transaction, function(err, result) {
+			}, function(err, result) {
 				if (err) {
 					return setImmediate(cb, err);
 				}

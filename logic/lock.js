@@ -284,22 +284,27 @@ Lock.prototype.calcLockBytes = function (height, amount, cb) {
 
 Lock.prototype.calcUnlockBytes = function (trs, cb) {
 	var publicKey = trs.senderPublicKey;
+	var amount = trs.amount;
 
-	modules.locks.getLockedBytes(publicKey, function (err, lockedBytes) {
-		if (err || !lockedBytes) {
+	modules.locks.getLockedBytes(publicKey, function (err, bytes) {
+		if (err || !bytes) {
 			return setImmediate(cb, "Locked bytes is 0");
 		}
 
-		modules.locks.getLockedBalance(publicKey, function (err, lockedBalance) {
-			if (err || !lockedBalance) {
+		var lockedBytes = new bignum(bytes.toString()).toNumber();
+
+		modules.locks.getLockedBalance(publicKey, function (err, bytes) {
+			if (err || !bytes) {
 				return setImmediate(cb, "Locked balance is 0");
 			}
 
-			if (trs.amount > lockedBalance) {
-				return setImmediate(cb, "Amount to unlock " + trs.amount + " cannot exceed locked balance  " + lockedBalance);
+			var lockedBalance = new bignum(bytes.toString()).toNumber();
+
+			if (amount > lockedBalance) {
+				return setImmediate(cb, "Amount to unlock " + amount + " cannot exceed locked balance  " + lockedBalance);
 			}
 
-			var bytes = (lockedBytes / lockedBalance) * trs.amount;
+			var bytes = (lockedBytes / lockedBalance) * amount;
 
 			return setImmediate(cb, null, bytes);
 		});
