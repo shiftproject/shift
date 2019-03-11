@@ -116,7 +116,8 @@ Block.prototype.create = function (data) {
 		totalAmount: totalAmount,
 		totalFee: totalFee,
 		reward: reward,
-		clusterSize: version == 0 ? null : (data.clusterSize ? parseInt(data.clusterSize) : 0),		
+		lockedBytes: version == 0 ? null : (data.lockedBytes ? parseInt(data.lockedBytes) : 0),
+		clusterSize: version == 0 ? null : (data.clusterSize ? parseInt(data.clusterSize) : 0),
 		payloadHash: payloadHash.digest().toString('hex'),
 		timestamp: data.timestamp,
 		numberOfTransactions: blockTransactions.length,
@@ -184,7 +185,8 @@ Block.prototype.getBytes = function (block) {
 		bb.writeLong(block.totalFee);
 		bb.writeLong(block.reward);
 
-		if (block.version === 1 && block.clusterSize) {
+		if (block.version === 1) {
+			bb.writeLong(block.lockedBytes);
 			bb.writeLong(block.clusterSize);
 		}
 
@@ -259,6 +261,8 @@ Block.prototype.dbFields = [
 	'totalAmount',
 	'totalFee',
 	'reward',
+	'lockedBytes',
+	'clusterSize',
 	'payloadLength',
 	'payloadHash',
 	'generatorPublicKey',
@@ -295,6 +299,7 @@ Block.prototype.dbSave = function (block) {
 			totalAmount: block.totalAmount,
 			totalFee: block.totalFee,
 			reward: block.reward || 0,
+			lockedBytes: block.version == 0 ? null : (block.lockedBytes ? parseInt(block.lockedBytes) : 0),
 			clusterSize: block.version == 0 ? null : (block.clusterSize ? parseInt(block.clusterSize) : 0),
 			payloadLength: block.payloadLength,
 			payloadHash: payloadHash,
@@ -375,6 +380,10 @@ Block.prototype.schema = {
 			type: 'integer',
 			minimum: 0
 		},
+		lockedBytes: {
+			type: 'integer',
+			minimum: 0
+		},
 		clusterSize: {
 			type: 'integer',
 			minimum: 0
@@ -407,8 +416,13 @@ Block.prototype.objectNormalize = function (block) {
 		}
 	}
 
-	if (block.version === 1 && !Block.prototype.schema.required.hasOwnProperty('clusterSize')) {
-		Block.prototype.schema.required.push('clusterSize');
+	if (block.version === 1) {
+		if (!Block.prototype.schema.required.hasOwnProperty('lockedBytes')) {
+			Block.prototype.schema.required.push('lockedBytes');
+		}
+		if (!Block.prototype.schema.required.hasOwnProperty('clusterSize')) {
+			Block.prototype.schema.required.push('clusterSize');
+		}
 	}
 
 	var report = this.scope.schema.validate(block, Block.prototype.schema);
@@ -480,7 +494,8 @@ Block.prototype.dbRead = function (raw) {
 			totalAmount: parseInt(raw.b_totalAmount),
 			totalFee: parseInt(raw.b_totalFee),
 			reward: parseInt(raw.b_reward),
-			clusterSize: raw.b_version === 0 ? null : (raw.b_clusterSize ? parseInt(raw.b_clusterSize) : 0),	
+			lockedBytes: raw.b_version === 0 ? null : (raw.b_lockedBytes ? parseInt(raw.b_lockedBytes) : 0),
+			clusterSize: raw.b_version === 0 ? null : (raw.b_clusterSize ? parseInt(raw.b_clusterSize) : 0),
 			payloadLength: parseInt(raw.b_payloadLength),
 			payloadHash: raw.b_payloadHash,
 			generatorPublicKey: raw.b_generatorPublicKey,
@@ -489,7 +504,7 @@ Block.prototype.dbRead = function (raw) {
 			confirmations: parseInt(raw.b_confirmations)
 		};
 
-		block.totalForged = new bignum(block.totalFee).plus(new bignum(block.reward)).toString();
+		block.totalForged = new bignum(block.totalFee.toString()).plus(new bignum(block.reward.toString())).toNumber();
 
 		return block;
 	}

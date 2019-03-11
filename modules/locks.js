@@ -151,13 +151,27 @@ Locks.prototype.getTotalLockedBytes = function (cb) {
 };
 
 /**
- * Gets records from `mem_cluster_stats` table based on ids
+ * Gets stats from block
+ * @param {string[]} timestamp
+ * @param {function} cb
+ * @return {setImmediateCallback} error description | lockedBytes, clusterSize
+ */
+Locks.prototype.getClusterStats = function (timestamp, cb) {
+	var lastBlock = modules.blocks.lastBlock.get();
+	var lockedBytes = lastBlock.lockedBytes;
+	var clusterSize = lastBlock.clusterSize;
+
+	return setImmediate(cb, null, lockedBytes, clusterSize);
+};
+
+/**
+ * Gets records from `mem_cluster_stats` table based on slots
  * @implements {library.db.query}
- * @param {string[]} ids
+ * @param {string[]} timestamp
  * @param {function} cb
  * @return {setImmediateCallback} error description | rows data
  */
-Locks.prototype.getClusterStats = function (timestamp, cb) {
+Locks.prototype.getClusterSize = function (timestamp, cb) {
 	library.db.query(sql.getClusterStats, {limit: constants.blockStatsInterval}).then(function (rows) {
 		var err = null;
 		var mode_avg = 0;
@@ -181,7 +195,7 @@ Locks.prototype.getClusterStats = function (timestamp, cb) {
 		}
 	}).catch(function (err) {
 		library.logger.error(err.stack);
-		return setImmediate(cb, 'Locks#getClusterStats error');
+		return setImmediate(cb, 'Locks#getClusterSize error');
 	});
 };
 

@@ -103,7 +103,7 @@ __private.setHeight = function (block, lastBlock) {
  * Verify block signature
  *
  * @private
- * @method verifySignature
+ * @method getClusterStats
  * @param  {Object}  block Target block
  * @param  {Object}  result Verification results
  * @return {Object}  result Verification results
@@ -493,18 +493,24 @@ Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateS
 
 			return setImmediate(seriesCb);
 		},
-		verifyClusterSize: function (seriesCb) {
-			if (block.clusterSize && constants.blockStatsInterval >= constants.blockSlotWindow) {
+		verifyClusterStats: function (seriesCb) {
+			if (constants.blockStatsInterval >= constants.blockSlotWindow) {
 				var blockSlotNumber = slots.getSlotNumber(block.timestamp) - 1;
 				var blockSlotTime = slots.getSlotTime(blockSlotNumber > constants.activeDelegates ? blockSlotNumber - constants.activeDelegates : constants.activeDelegates);
 
-				modules.locks.getClusterStats(blockSlotTime, function (err, totalBytes) {
+				modules.locks.getClusterStats(blockSlotTime, function (err, lockedBytes, totalBytes) {
 					// Skip checking if there are not enough recent stats available
 					if (err) {
 						return setImmediate(seriesCb);
 					}
 
-					// Fork: cluster size of block does not match cluster size of stats
+					// Fork: locked bytes in block does not match sum of all locked bytes
+					if (lockedBytes != block.lockedBytes) {
+						modules.delegates.fork(block, 6);
+						return setImmediate(seriesCb, 'Unexpected locked bytes');
+					}
+
+					// Fork: cluster size in block does not match cluster size of stats
 					if (totalBytes != block.clusterSize) {
 						modules.delegates.fork(block, 6);
 						return setImmediate(seriesCb, 'Unexpected cluster size');

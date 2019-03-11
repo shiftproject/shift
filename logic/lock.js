@@ -249,10 +249,7 @@ Lock.prototype.calcLockBytes = function (height, amount, cb) {
 
 		totalLockedBytes = new bignum(totalLockedBytes).toNumber();
 
-		var lastBlock = modules.blocks.lastBlock.get();
-		var replication = lockSettings.locks[lockSettings.calcMilestone(lastBlock.height)].replication;
-
-		modules.locks.getClusterStats(null, function (err, totalBytes) {
+		modules.locks.getClusterStats(null, function (err, lockedBytes, totalBytes) {
 			if (err) {
 				return setImmediate(cb, "Total bytes is 0");
 			}
@@ -265,7 +262,7 @@ Lock.prototype.calcLockBytes = function (height, amount, cb) {
 				return setImmediate(cb, "No free bytes available");
 			}
 
-			// The actual amount to bytes calculation. Make sure to mind the replication.
+			// The actual amount to bytes calculation. We mind the replication in compensationFactor.
 			if (totalLockedBytes > 0) {
 				var lockBytes = amount / (compensationFactor * (totalLockedBytes / freeBytes) * ratioFactor);
 			} else {
@@ -293,12 +290,12 @@ Lock.prototype.calcUnlockBytes = function (trs, cb) {
 
 		var lockedBytes = new bignum(bytes.toString()).toNumber();
 
-		modules.locks.getLockedBalance(publicKey, function (err, bytes) {
-			if (err || !bytes) {
+		modules.locks.getLockedBalance(publicKey, function (err, balance) {
+			if (err || !balance) {
 				return setImmediate(cb, "Locked balance is 0");
 			}
 
-			var lockedBalance = new bignum(bytes.toString()).toNumber();
+			var lockedBalance = new bignum(balance.toString()).toNumber();
 
 			if (amount > lockedBalance) {
 				return setImmediate(cb, "Amount to unlock " + amount + " cannot exceed locked balance  " + lockedBalance);

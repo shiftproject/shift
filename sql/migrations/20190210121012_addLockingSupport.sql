@@ -12,14 +12,42 @@ ALTER TABLE "mem_accounts" ADD COLUMN "pinned_bytes" BIGINT DEFAULT 0;
 ALTER TABLE "mem_accounts" ADD COLUMN "u_pinned_bytes" BIGINT DEFAULT 0;
 
 /*
- * Add cluster size to blocks
+ * Add locked bytes and cluster size to blocks
  */
 
+ALTER TABLE "blocks" ADD COLUMN "lockedBytes" BIGINT DEFAULT 0;
 ALTER TABLE "blocks" ADD COLUMN "clusterSize" BIGINT DEFAULT 0;
 
 COMMIT;
 
 BEGIN;
+
+/* Alter view
+ * Recreate blocks_list, add lockedBytes and clusterSize
+ */
+
+DROP VIEW IF EXISTS blocks_list;
+
+CREATE VIEW blocks_list AS
+
+SELECT b."id" AS "b_id",
+       b."version" AS "b_version",
+       b."timestamp" AS "b_timestamp",
+       b."height" AS "b_height",
+       b."previousBlock" AS "b_previousBlock",
+       b."numberOfTransactions" AS "b_numberOfTransactions",
+       (b."totalAmount")::bigint AS "b_totalAmount",
+       (b."totalFee")::bigint AS "b_totalFee",
+       (b."reward")::bigint AS "b_reward",
+       (b."lockedBytes")::bigint AS "b_lockedBytes",
+       (b."clusterSize")::bigint AS "b_clusterSize",
+       b."payloadLength" AS "b_payloadLength",
+       ENCODE(b."payloadHash", 'hex') AS "b_payloadHash",
+       ENCODE(b."generatorPublicKey", 'hex') AS "b_generatorPublicKey",
+       ENCODE(b."blockSignature", 'hex') AS "b_blockSignature",
+       (SELECT MAX("height") + 1 FROM blocks) - b."height" AS "b_confirmations"
+
+FROM blocks b;
 
 /* Alter view
  * Recreate full_blocks_list, add join for locks and pins tables.
@@ -38,6 +66,7 @@ SELECT b."id" AS "b_id",
        (b."totalAmount")::bigint AS "b_totalAmount",
        (b."totalFee")::bigint AS "b_totalFee",
        (b."reward")::bigint AS "b_reward",
+       (b."lockedBytes")::bigint AS "b_lockedBytes",
        (b."clusterSize")::bigint AS "b_clusterSize",
        b."payloadLength" AS "b_payloadLength",
        ENCODE(b."payloadHash", 'hex') AS "b_payloadHash",

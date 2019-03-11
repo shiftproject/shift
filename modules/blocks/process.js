@@ -316,7 +316,10 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 			}
 		});
 	}, function () {
-		function createBlock (clusterSize, cb) {
+		var block;
+		var last = modules.blocks.lastBlock.get();
+		var version = modules.system.getBlockVersion(last.height+1);		
+		var createBlock = function (lockedBytes, clusterSize, cb) {
 			try {
 				// Create a block
 				block = library.logic.block.create({
@@ -325,6 +328,7 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 					previousBlock: last,
 					transactions: ready,
 					version: version,
+					lockedBytes: lockedBytes,
 					clusterSize: clusterSize
 				});
 			} catch (e) {
@@ -335,22 +339,24 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 			// Start block processing - broadcast: true, saveBlock: true, validateSlot: true
 			modules.blocks.verify.processBlock(block, true, true, true, cb);
 		}
-		
-		var block;
-		var last = modules.blocks.lastBlock.get();
-		var version = modules.system.getBlockVersion(last.height+1);
 
 		if (version > 0) {
-			// Get size from memtable to add to block
-			modules.locks.getClusterStats(null, function (err, totalBytes) {
+			// Get total locked bytes till last block
+			modules.locks.getTotalLockedBytes(function (err, lockedBytes) {
 				if (err) {
-					return setImmediate(cb, 'Unable to forge because of incomplete cluster stats');
+					return setImmediate(cb, err);
 				}
+				// Get size (mode avg) from memtable to add to block
+				modules.locks.getClusterSize(null, function (err, clusterSize) {
+					if (err) {
+						return setImmediate(cb, 'Unable to forge because of incomplete cluster stats');
+					}
 
-				createBlock(totalBytes, cb);
+					createBlock(lockedBytes, clusterSize, cb);
+				});
 			});
 		} else {
-			createBlock(null, cb);
+			createBlock(null, null, cb);
 		}
 	});
 };
