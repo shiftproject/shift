@@ -341,19 +341,12 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 		}
 
 		if (version > 0) {
-			// Get total locked bytes till last block
-			modules.locks.getTotalLockedBytes(function (err, lockedBytes) {
+			modules.locks.getClusterStats(null, function (err, lockedBytes, clusterSize) {
 				if (err) {
-					return setImmediate(cb, err);
+					return setImmediate(cb, 'Unable to forge because of incomplete cluster stats');
 				}
-				// Get size (mode avg) from memtable to add to block
-				modules.locks.getClusterSize(null, function (err, clusterSize) {
-					if (err) {
-						return setImmediate(cb, 'Unable to forge because of incomplete cluster stats');
-					}
 
-					createBlock(lockedBytes, clusterSize, cb);
-				});
+				createBlock(lockedBytes, clusterSize, cb);
 			});
 		} else {
 			createBlock(null, null, cb);

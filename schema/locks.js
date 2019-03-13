@@ -73,5 +73,17 @@ module.exports = {
 				maxLength: 20
 			}
 		}
+	},
+	getBlockStats: {
+		id: 'locks.getBlockStats',
+		type: 'object',
+		properties: {
+			timestamp: {
+				type: 'integer',
+				minimum: 0,
+				maximum: 8640000000000000
+			}
+		},
+		required: ['timestamp']
 	}
 };

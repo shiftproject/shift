@@ -129,10 +129,10 @@ Lock.prototype.verify = function (trs, sender, cb) {
 		}
 
 		var lastBlock = modules.blocks.lastBlock.get();
-		self.calcLockBytes(lastBlock.height, trs.amount, function(err, result){
+		self.calcLockBytes(lastBlock.height, trs.amount, trs.timestamp, function(err, result){
 			if (err) {
 				// Unable to calculate | incomplete stats
-				return setImmediate(cb, null, trs);
+				return setImmediate(cb, err, trs);
 			}
 
 			var lockBytes = Math.round(result);
@@ -233,7 +233,7 @@ Lock.prototype.getBytes = function (trs) {
  * @param {function} cb
  * @return {setImmediateCallback} error | cb
  */
-Lock.prototype.calcLockBytes = function (height, amount, cb) {
+Lock.prototype.calcLockBytes = function (height, amount, timestamp, cb) {
 	var compensationFactor = lockSettings.calcCompensation(height, true);
 	var ratioFactor = lockSettings.calcRatioFactor(height);
 	var tolerance = lockSettings.calcTolerance(height);
@@ -242,40 +242,34 @@ Lock.prototype.calcLockBytes = function (height, amount, cb) {
 		return setImmediate(cb, "Amount is 0");
 	}
 
-	modules.locks.getTotalLockedBytes(function (err, totalLockedBytes) {
+	modules.locks.getClusterStats(timestamp, function (err, totalLockedBytes, totalBytes) {
 		if (err) {
 			return setImmediate(cb, err);
 		}
 
 		totalLockedBytes = new bignum(totalLockedBytes).toNumber();
+		totalBytes = new bignum(totalBytes).toNumber();
 
-		modules.locks.getClusterStats(null, function (err, lockedBytes, totalBytes) {
-			if (err) {
-				return setImmediate(cb, "Total bytes is 0");
-			}
+		// Total minus used is available (10% buffer)
+		var freeBytes = (totalBytes - (totalBytes / tolerance)) - totalLockedBytes;
+		if (freeBytes <= 0) {
+			return setImmediate(cb, "No free bytes available");
+		}
 
-			totalBytes = new bignum(totalBytes).toNumber();
+		// The actual amount to bytes calculation. We mind the replication in compensationFactor.
+		if (totalLockedBytes > 0) {
+			var lockBytes = amount / (compensationFactor * (totalLockedBytes / freeBytes) * ratioFactor);
+		} else {
+			var lockBytes = amount / (compensationFactor * ratioFactor);
+		}
 
-			// Total minus used is available (10% buffer)
-			var freeBytes = (totalBytes - (totalBytes / tolerance)) - totalLockedBytes;
-			if (freeBytes <= 0) {
-				return setImmediate(cb, "No free bytes available");
-			}
 
-			// The actual amount to bytes calculation. We mind the replication in compensationFactor.
-			if (totalLockedBytes > 0) {
-				var lockBytes = amount / (compensationFactor * (totalLockedBytes / freeBytes) * ratioFactor);
-			} else {
-				var lockBytes = amount / (compensationFactor * ratioFactor);
-			}
+		var available = freeBytes - lockBytes;
+		if (available < 0) {
+			return setImmediate(cb, "Not enough free bytes available: " + (available * -1));
+		}
 
-			var available = freeBytes - lockBytes;
-			if (available < 0) {
-				return setImmediate(cb, "Not enough free bytes available: " + (available * -1));
-			}
-
-			return setImmediate(cb, null, lockBytes);
-		});
+		return setImmediate(cb, null, lockBytes);
 	});
 }
 

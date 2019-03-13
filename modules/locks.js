@@ -151,17 +151,46 @@ Locks.prototype.getTotalLockedBytes = function (cb) {
 };
 
 /**
- * Gets stats from block
+ * Get stats from block or memtables
  * @param {string[]} timestamp
  * @param {function} cb
  * @return {setImmediateCallback} error description | lockedBytes, clusterSize
  */
 Locks.prototype.getClusterStats = function (timestamp, cb) {
-	var lastBlock = modules.blocks.lastBlock.get();
-	var lockedBytes = lastBlock.lockedBytes;
-	var clusterSize = lastBlock.clusterSize;
+	if (timestamp) {
+		// Lookup stats in blocks, validate trs
+		library.db.query(sql.getBlockStats, {timestamp: timestamp}).then(function (blocks) {
+			if (!block.length) {
+				return setImmediate(cb, 'Block stats not found');
+			}
+			var block = blocks[0];
 
-	return setImmediate(cb, null, lockedBytes, clusterSize);
+			var lastBlock = modules.blocks.lastBlock.get();
+			if (lastBlock.height - block.height > 5) {
+				return setImmediate(cb, 'Block stats are too old');
+			}
+
+			return setImmediate(cb, null, block.lockedBytes, block.clusterSize);
+		}).catch(function (err) {
+			library.logger.error(err.stack);
+			return setImmediate(cb, 'Locks#getBlockStats error');
+		});
+	} else {
+		// Lookup stats in memtables, validate block
+		self.getTotalLockedBytes(function (err, lockedBytes) {
+			if (err) {
+				return setImmediate(cb, err);
+			}
+
+			self.getClusterSize(null, function (err, clusterSize) {
+				if (err) {
+					return setImmediate(cb, err);
+				}
+
+				return setImmediate(cb, null, lockedBytes || 0, clusterSize || 0);
+			});
+		});
+	}
 };
 
 /**
@@ -539,7 +568,7 @@ Locks.prototype.shared = {
 			}
 
 			var lastBlock = modules.blocks.lastBlock.get();
-			__private.lock.calcLockBytes(lastBlock.height, req.body.amount, function(err, result) {
+			__private.lock.calcLockBytes(lastBlock.height, req.body.amount, null, function(err, result) {
 				if (err) {
 					return setImmediate(cb, err);
 				}
