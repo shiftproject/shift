@@ -160,7 +160,7 @@ Locks.prototype.getClusterStats = function (timestamp, cb) {
 	if (timestamp) {
 		// Lookup stats in blocks, validate trs
 		library.db.query(sql.getBlockStats, {timestamp: timestamp}).then(function (blocks) {
-			if (!block.length) {
+			if (!blocks.length) {
 				return setImmediate(cb, 'Block stats not found');
 			}
 			var block = blocks[0];

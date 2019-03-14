@@ -11,7 +11,7 @@ var LocksSql = {
 	'("id","total_locked_balance","total_locked_bytes","latest_cluster_total","latest_cluster_used","stats_timestamp") '+
 	'VALUES (${id}, ${locked_balance}, ${locked_bytes}, ${total_bytes}, ${used_bytes}, ${timestamp}) '+
 	'ON CONFLICT (id) DO UPDATE set "total_locked_balance" = ${locked_balance}, "total_locked_bytes" = ${locked_bytes}, "latest_cluster_total" = ${total_bytes}, "latest_cluster_used" = ${used_bytes}, "stats_timestamp" = ${timestamp}',
-	getBlockStats: 'SELECT "timestamp", "height", lockedBytes", "clusterSize" FROM blocks WHERE "timestamp" < ${timestamp} ORDER BY "height" DESC LIMIT 1'
+	getBlockStats: 'SELECT "timestamp", "height", "lockedBytes", "clusterSize" FROM blocks WHERE "timestamp" < ${timestamp} ORDER BY "height" DESC LIMIT 1'
 };
 
 module.exports = LocksSql;
