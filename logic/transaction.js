@@ -353,7 +353,7 @@ Transaction.prototype.checkConfirmed = function (trs, cb) {
  * @returns {Object} With exceeded boolean and error: address, balance
  */
 Transaction.prototype.checkBalance = function (amount, balance, trs, sender) {
-	var exceededBalance = new bignum(sender[balance].toString()).lessThan(amount);
+	var exceededBalance = new bignum(sender.balance.toString()).lessThan(amount);
 	var exceeded = (trs.blockId !== this.scope.genesisblock.block.id && exceededBalance);
 	var err;
 
@@ -637,8 +637,14 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 		return setImmediate(cb, 'Invalid transaction amount');
 	}
 
+	// Unlock should always have a negative amount
+	if (trs.type == transactionTypes.UNLOCK) {
+		var amount = new bignum(trs.amount.toString()).mul(-1).plus(trs.fee.toString()).toNumber();
+	} else {
+		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
+	}	
+
 	// Check confirmed sender balance
-	var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
 	var senderBalance = this.checkBalance(amount, 'balance', trs, sender);
 
 	if (senderBalance.exceeded) {
@@ -770,7 +776,7 @@ Transaction.prototype.apply = function (trs, block, sender, cb) {
 	}
 
 	// Unlock should always have a negative amount
-	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
+	if (trs.type == transactionTypes.UNLOCK) {
 		var amount = new bignum(trs.amount.toString()).mul(-1).plus(trs.fee.toString()).toNumber();
 	} else {
 		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
@@ -825,7 +831,7 @@ Transaction.prototype.apply = function (trs, block, sender, cb) {
  */
 Transaction.prototype.undo = function (trs, block, sender, cb) {
 	// Unlock should always have a negative amount
-	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
+	if (trs.type == transactionTypes.UNLOCK) {
 		var amount = new bignum(trs.amount.toString()).mul(-1).plus(trs.fee.toString()).toNumber();
 	} else {
 		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
@@ -880,7 +886,7 @@ Transaction.prototype.applyUnconfirmed = function (trs, sender, requester, cb) {
 	}
 
 	// Unlock should always have a negative amount
-	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
+	if (trs.type == transactionTypes.UNLOCK) {
 		var amount = new bignum(trs.amount.toString()).mul(-1).plus(trs.fee.toString()).toNumber();
 	} else {
 		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();
@@ -922,7 +928,7 @@ Transaction.prototype.applyUnconfirmed = function (trs, sender, requester, cb) {
  * @return {setImmediateCallback} for errors | cb
  */
 Transaction.prototype.undoUnconfirmed = function (trs, sender, cb) {
-	if (trs.type == transactionTypes.UNLOCK && trs.amount > 0) {
+	if (trs.type == transactionTypes.UNLOCK) {
 		var amount = new bignum(trs.amount.toString()).mul(-1).plus(trs.fee.toString()).toNumber();
 	} else {
 		var amount = new bignum(trs.amount.toString()).plus(trs.fee.toString()).toNumber();

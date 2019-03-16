@@ -174,7 +174,6 @@ Pins.prototype.shared = {
 			return setImmediate(cb, null, f);
 		});
 	},
-
 	addPin: function (req, cb) {
 		library.schema.validate(req.body, schema.addPin, function (err) {
 			if (err) {
@@ -305,8 +304,7 @@ Pins.prototype.shared = {
 		});
 	},
 	getPinnedBytes: function (req, cb) {
-		var lastBlock = modules.blocks.lastBlock.get();
-		var replication = lockSettings.locks[lockSettings.calcMilestone(lastBlock.height)].replication;
+		var replication = modules.locks.getReplication();
 
 		library.schema.validate(req.body, schema.getPinnedBytes, function (err) {
 			if (err) {

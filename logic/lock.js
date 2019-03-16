@@ -116,12 +116,12 @@ Lock.prototype.verify = function (trs, sender, cb) {
 		return setImmediate(cb, 'Invalid transaction asset');
 	}
 
+	var availableBalance = new bignum(sender.balance.toString());
 	if (trs.type == transactionTypes.LOCK) {
-		var availableBalance = new bignum(sender.balance);
 		var totalAmount = new bignum(trs.amount).plus(trs.fee);
 		if (availableBalance.lessThan(totalAmount)) {
 			var err = [
-				'Account does not have enough SHIFT:', sender.address,
+				'Account does not have enough SHIFT to perform this lock request:', sender.address,
 				'Available balance:', availableBalance.div(Math.pow(10,8))
 			].join(' ');
 
@@ -144,9 +144,7 @@ Lock.prototype.verify = function (trs, sender, cb) {
 			return setImmediate(cb, err, trs);
 		});
 	} else if (trs.type == transactionTypes.UNLOCK) {
-		var availableBalance = new bignum(sender.balance);
-		var unlockAmount = availableBalance.minus(trs.fee).minus(trs.amount);
-		if (unlockAmount.lessThan(0)) {
+		if (availableBalance.lessThan(trs.fee)) {
 			var err = 'Not enough SHIFT to perform this unlock request: '+ trs.id;
 			return setImmediate(cb, err);
 		}

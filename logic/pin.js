@@ -92,9 +92,9 @@ Pin.prototype.verify = function (trs, sender, cb) {
 
 	if (!trs.asset || !trs.asset.pin || !trs.asset.pin.hash || !trs.asset.pin.bytes) {
 		return setImmediate(cb, 'Invalid transaction asset');
-	}	
+	}
 
-	var availableBalance = new bignum(sender.balance.toString()).minus(sender.locked_balance.toString());
+	var availableBalance = new bignum(sender.balance.toString());
 	var totalAmount = new bignum(trs.fee.toString());
 	if (availableBalance.lessThan(totalAmount)) {
 		var err = [
@@ -121,8 +121,10 @@ Pin.prototype.verify = function (trs, sender, cb) {
 				}
 
 				modules.pins.getPinnedBytes(publicKey, function (err, pinnedBytes) {
-					var availableLockedBytes = lockedBytes - pinnedBytes;
-					if (availableLockedBytes - trs.asset.pin.bytes < 0) {
+					var replication = modules.locks.getReplication();
+					var availableLockedBytes = lockedBytes - (pinnedBytes * replication);
+
+					if (availableLockedBytes - (trs.asset.pin.bytes * replication) < 0) {
 						var err = 'Not enough locked bytes available';
 					}
 

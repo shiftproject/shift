@@ -151,6 +151,17 @@ Locks.prototype.getTotalLockedBytes = function (cb) {
 };
 
 /**
+ * Get replication factor of last block
+ * @return replication
+ */
+Locks.prototype.getReplication = function () {
+	var lastBlock = modules.blocks.lastBlock.get();
+	var replication = lockSettings.locks[lockSettings.calcMilestone(lastBlock.height)].replication;
+
+	return replication;
+}
+
+/**
  * Get stats from block or memtables
  * @param {string[]} timestamp
  * @param {function} cb
@@ -166,7 +177,7 @@ Locks.prototype.getClusterStats = function (timestamp, cb) {
 			var block = blocks[0];
 
 			var lastBlock = modules.blocks.lastBlock.get();
-			if (lastBlock.height - block.height > 5) {
+			if (lastBlock.height - block.height > constants.blockSlotWindow) {
 				return setImmediate(cb, 'Block stats are too old');
 			}
 
