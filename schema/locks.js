@@ -67,10 +67,10 @@ module.exports = {
 		id: 'locks.getClusterStats',
 		type: 'object',
 		properties: {
-			id: {
-				type: 'string',
-				minLength: 1,
-				maxLength: 20
+			timestamp: {
+				type: 'integer',
+				minimum: 0,
+				maximum: 8640000000000000
 			}
 		}
 	},

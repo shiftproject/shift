@@ -36,7 +36,7 @@ function LocksHttpApi (locksModule, app, logger, cache) {
 		'get /balance': 'getLockedBalance',
 		'get /bytes': 'getLockedBytes',
 		'get /totalBytes': 'getTotalLockedBytes',
-		'get /clusterStats': 'getClusterStats'
+		'get /getStats': 'getClusterStats'
 	});
 
 	httpApi.registerEndpoint('/api/locks', app, router, locksModule.isLoaded);

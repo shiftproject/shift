@@ -198,7 +198,7 @@ Locks.prototype.getClusterStats = function (timestamp, cb) {
 					return setImmediate(cb, err);
 				}
 
-				return setImmediate(cb, null, lockedBytes || 0, clusterSize || 0);
+				return setImmediate(cb, null, lockedBytes, clusterSize);
 			});
 		});
 	}
@@ -661,12 +661,12 @@ Locks.prototype.shared = {
 			if (err) {
 				return setImmediate(cb, err[0].message);
 			}
-			self.getClusterStats(req.body.id, function (err, stats) {
+			self.getClusterStats(req.body.timestamp, function (err, lockedBytes, clusterSize) {
 				if (err) {
 					return setImmediate(cb, err);
 				}
 
-				return setImmediate(cb, null, { stats: (stats || 0) });
+				return setImmediate(cb, null, { bytes: (lockedBytes || 0), size: (clusterSize || 0) });
 			});
 		});
 	}
