@@ -496,7 +496,7 @@ Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateS
 		verifyClusterStats: function (seriesCb) {
 
 				modules.locks.getClusterStats(null, function (err, lockedBytes, totalBytes) {
-					// Skip checking if there are not enough recent stats available
+					// Skip verifying if there are not enough recent stats available
 					if (err) {
 						return setImmediate(seriesCb);
 					}

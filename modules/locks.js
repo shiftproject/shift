@@ -168,15 +168,16 @@ Locks.prototype.getReplication = function () {
  * @return {setImmediateCallback} error description | lockedBytes, clusterSize
  */
 Locks.prototype.getClusterStats = function (timestamp, cb) {
+	var lastBlock = modules.blocks.lastBlock.get();
+
 	if (timestamp) {
-		// Lookup stats in blocks, validate trs
+		// Lookup stats in blocks, to validate trs
 		library.db.query(sql.getBlockStats, {timestamp: timestamp}).then(function (blocks) {
 			if (!blocks.length) {
 				return setImmediate(cb, 'Block stats not found');
 			}
 			var block = blocks[0];
 
-			var lastBlock = modules.blocks.lastBlock.get();
 			if (lastBlock.height - block.height > constants.blockSlotWindow) {
 				return setImmediate(cb, 'Block stats are too old');
 			}
@@ -187,13 +188,17 @@ Locks.prototype.getClusterStats = function (timestamp, cb) {
 			return setImmediate(cb, 'Locks#getBlockStats error');
 		});
 	} else {
-		// Lookup stats in memtables, validate block
+		// Lookup stats in memtables, to validate block
 		self.getTotalLockedBytes(function (err, lockedBytes) {
 			if (err) {
 				return setImmediate(cb, err);
 			}
 
-			self.getClusterSize(null, function (err, clusterSize) {
+			// Get stats using timestamp of 1 round back
+			var blockSlotNumber = slots.getSlotNumber(lastBlock.timestamp) - 1;
+			var blockSlotTime = slots.getSlotTime(blockSlotNumber > constants.activeDelegates ? blockSlotNumber - constants.activeDelegates : constants.activeDelegates);
+
+			self.getClusterSize(blockSlotTime, function (err, clusterSize) {
 				if (err) {
 					return setImmediate(cb, err);
 				}
@@ -341,7 +346,7 @@ Locks.prototype.setClusterStats = function (cb) {
 					locked_bytes: results.lockedBytes,
 					total_bytes: results.clusterStats.TotalStorage,
 					used_bytes: results.clusterStats.UsedStorage,
-					timestamp: slots.getTime() // getRealTime?
+					timestamp: slots.getTime()
 				};
 
 				// Todo: Add input validation?
@@ -652,7 +657,7 @@ Locks.prototype.shared = {
 			if (err) {
 				return setImmediate(cb, err);
 			}
-			
+
 			return setImmediate(cb, null, { bytes: (bytes || 0) });
 		});
 	},

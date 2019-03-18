@@ -13,7 +13,7 @@ var httpApi = require('../../helpers/httpApi');
  * 	- get	/balance
  * 	- get	/bytes
  * 	- get	/totalBytes
- * 	- get	/clusterStats
+ * 	- get	/stats
  * @memberof module:locks
  * @requires helpers/Router
  * @requires helpers/httpApi
@@ -36,7 +36,7 @@ function LocksHttpApi (locksModule, app, logger, cache) {
 		'get /balance': 'getLockedBalance',
 		'get /bytes': 'getLockedBytes',
 		'get /totalBytes': 'getTotalLockedBytes',
-		'get /getStats': 'getClusterStats'
+		'get /stats': 'getClusterStats'
 	});
 
 	httpApi.registerEndpoint('/api/locks', app, router, locksModule.isLoaded);
