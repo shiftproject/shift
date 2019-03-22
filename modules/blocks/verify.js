@@ -103,7 +103,7 @@ __private.setHeight = function (block, lastBlock) {
  * Verify block signature
  *
  * @private
- * @method getClusterStats
+ * @method verifySignature
  * @param  {Object}  block Target block
  * @param  {Object}  result Verification results
  * @return {Object}  result Verification results
@@ -494,27 +494,30 @@ Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateS
 			return setImmediate(seriesCb);
 		},
 		verifyClusterStats: function (seriesCb) {
+			var blockSlotNumber = slots.getSlotNumber(block.timestamp) - 1;
+			var blockSlotTime = slots.getSlotTime(blockSlotNumber > constants.activeDelegates ? blockSlotNumber - constants.activeDelegates : constants.activeDelegates);
 
-				modules.locks.getClusterStats(null, function (err, lockedBytes, totalBytes) {
-					// Skip verifying if there are not enough recent stats available
-					if (err) {
-						return setImmediate(seriesCb);
-					}
-
-					// Fork: locked bytes in block does not match sum of all locked bytes
-					if (lockedBytes > 0 && lockedBytes != block.lockedBytes) {
-						modules.delegates.fork(block, 6);
-						return setImmediate(seriesCb, 'Unexpected locked bytes');
-					}
-
-					// Fork: cluster size in block does not match cluster size of stats
-					if (totalBytes > 0 && totalBytes != block.clusterSize) {
-						modules.delegates.fork(block, 6);
-						return setImmediate(seriesCb, 'Unexpected cluster size');
-					}
-
+			modules.locks.getClusterStats(blockSlotTime, false, function (err, lockedBytes, totalBytes) {
+				// Skip verifying if there are not enough recent stats available
+				if (err) {
 					return setImmediate(seriesCb);
-				});
+				}
+
+
+				// Fork: locked bytes in block does not match sum of all locked bytes
+				if (lockedBytes > 0 && lockedBytes != block.lockedBytes) {
+					modules.delegates.fork(block, 6);
+					return setImmediate(seriesCb, 'Unexpected locked bytes');
+				}
+
+				// Fork: cluster size in block does not match cluster size of stats
+				if (totalBytes > 0 && totalBytes != block.clusterSize) {
+					modules.delegates.fork(block, 6);
+					return setImmediate(seriesCb, 'Unexpected cluster size');
+				}
+
+				return setImmediate(seriesCb);
+			});
 		},
 		checkExists: function (seriesCb) {
 			// Check if block id is already in the database (very low probability of hash collision)

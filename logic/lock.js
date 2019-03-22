@@ -3,7 +3,6 @@
 var async = require('async');
 var lockSettings = require('../helpers/lockSettings.js');
 var transactionTypes = require('../helpers/transactionTypes.js');
-var jobsQueue = require('../helpers/jobsQueue.js');
 var bignum = require('../helpers/bignum.js');
 var ByteBuffer = require('bytebuffer');
 
@@ -17,28 +16,12 @@ var modules, library, self, __private = {};
  * @classdesc Main lock logic.
  */
 // Constructor
-function Lock (schema, logger, statsInterval) {
+function Lock (schema, logger) {
 	library = {
 		schema: schema,
 		logger: logger
 	};
 	self = this;
-
-	// Cluster stats timer
-	function setStats (cb) {
-		if (modules && modules.locks) {
-			modules.locks.setClusterStats(function (err) {
-				if (err) {
-					library.logger.error('Cluster stats timer', err);
-				}
-				return setImmediate(cb);
-			});
-		} else {
-			cb();
-		}
-	}
-
-	jobsQueue.register('setClusterStats', setStats, statsInterval);
 }
 
 /**
@@ -240,7 +223,7 @@ Lock.prototype.calcLockBytes = function (height, amount, timestamp, cb) {
 		return setImmediate(cb, "Amount is 0");
 	}
 
-	modules.locks.getClusterStats(timestamp, function (err, totalLockedBytes, totalBytes) {
+	modules.locks.getClusterStats(timestamp, true, function (err, totalLockedBytes, totalBytes) {
 		if (err) {
 			return setImmediate(cb, err);
 		}
@@ -256,9 +239,9 @@ Lock.prototype.calcLockBytes = function (height, amount, timestamp, cb) {
 
 		// The actual amount to bytes calculation. We mind the replication in compensationFactor.
 		if (totalLockedBytes > 0) {
-			var lockBytes = amount / (compensationFactor * (totalLockedBytes / freeBytes) * ratioFactor);
+			var lockBytes = Math.round(amount / (compensationFactor * (totalLockedBytes / freeBytes) * ratioFactor));
 		} else {
-			var lockBytes = amount / (compensationFactor * ratioFactor);
+			var lockBytes = Math.round(amount / (compensationFactor * ratioFactor));
 		}
 
 

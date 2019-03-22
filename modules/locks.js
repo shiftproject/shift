@@ -11,13 +11,14 @@ var sql = require('../sql/locks.js');
 var transactionTypes = require('../helpers/transactionTypes.js');
 var slots = require('../helpers/slots.js');
 var popsicle = require('popsicle');
+var jobsQueue = require('../helpers/jobsQueue.js');
 
 // Private fields
 var modules, library, self, __private = {}, shared = {};
 
 __private.storagePeers = {};
 __private.assetTypes = {};
-__private.slotStatSaved = null;
+__private.lastSlotSaved = null;
 
 /**
  * Initializes library with scope content and generates a Lock instance.
@@ -49,8 +50,7 @@ function Locks (cb, scope) {
 
 	__private.lock = new Lock(
 		scope.schema,
-		scope.logger,
-		constants.blockTime
+		scope.logger
 	);
 
 	// Lock
@@ -167,10 +167,10 @@ Locks.prototype.getReplication = function () {
  * @param {function} cb
  * @return {setImmediateCallback} error description | lockedBytes, clusterSize
  */
-Locks.prototype.getClusterStats = function (timestamp, cb) {
+Locks.prototype.getClusterStats = function (timestamp, blockStats, cb) {
 	var lastBlock = modules.blocks.lastBlock.get();
 
-	if (timestamp) {
+	if (timestamp && blockStats) {
 		// Lookup stats in blocks, to validate trs
 		library.db.query(sql.getBlockStats, {timestamp: timestamp}).then(function (blocks) {
 			if (!blocks.length) {
@@ -194,11 +194,7 @@ Locks.prototype.getClusterStats = function (timestamp, cb) {
 				return setImmediate(cb, err);
 			}
 
-			// Get stats using timestamp of 1 round back
-			var blockSlotNumber = slots.getSlotNumber(lastBlock.timestamp) - 1;
-			var blockSlotTime = slots.getSlotTime(blockSlotNumber > constants.activeDelegates ? blockSlotNumber - constants.activeDelegates : constants.activeDelegates);
-
-			self.getClusterSize(blockSlotTime, function (err, clusterSize) {
+			self.getClusterSize(timestamp, function (err, clusterSize) {
 				if (err) {
 					return setImmediate(cb, err);
 				}
@@ -230,8 +226,18 @@ Locks.prototype.getClusterSize = function (timestamp, cb) {
 				totals.push(stat.latest_cluster_total);
 				// console.log('stat', stat.id, stat.latest_cluster_total);
 			});
+
+			// Remove latest snapshot from desc list
+			if (totals.length == constants.blockStatsInterval){
+				totals.splice(0, 1);
+				debug.splice(0, 1);
+			}
+
+			// Sort values asc
 			totals.sort();
-			var middle = Math.ceil(totals.length / 2);
+
+			// Pick value in middle
+			var middle = Math.floor(totals.length / 2);
 			var mode_avg = totals[middle];
 
 			return setImmediate(cb, err, mode_avg);
@@ -254,14 +260,13 @@ Locks.prototype.setClusterStats = function (cb) {
 		return cb();
 	}
 
-	var lastBlock = modules.blocks.lastBlock.get();
-	var lastRound = Math.floor(lastBlock.height / slots.delegates);
-	var slotNumber = lastBlock.height - (lastRound * slots.delegates) + 1;
-	var slotToSave = Math.round(slotNumber / constants.blockStatsInterval) * constants.blockStatsInterval;
+	var slotNumber = slots.getSlotNumber();
+	var slotToSave = Math.floor(slotNumber % 100 / constants.blockStatsInterval) * constants.blockStatsInterval || 100;
+	var lastRound = Math.floor(slotNumber / constants.activeDelegates);
 
 	library.logger.trace('Modules/Locks->setClusterStats', {interval: constants.blockStatsInterval, slot: slotNumber});
 
-	if (slotToSave == 0 || __private.slotStatSaved == lastRound + '.' + slotToSave) {
+	if (!slotToSave || __private.lastSlotSaved == lastRound + '.' + slotToSave) {
 		return cb();
 	} else {
 		async.series({
@@ -353,7 +358,7 @@ Locks.prototype.setClusterStats = function (cb) {
 
 				// Save stats
 				library.db.query(sql.setClusterStats, stats).then(function () {
-					__private.slotStatSaved = lastRound + '.' + slotToSave;
+					__private.lastSlotSaved = lastRound + '.' + slotToSave;
 					library.logger.log('Saved stats to memtable' + ':' + JSON.stringify(stats));
 					return setImmediate(cb, null);
 				}).catch(function (err) {
@@ -447,6 +452,18 @@ Locks.prototype.onBind = function (scope) {
 		self,
 		scope.pins
 	);
+
+	// Cluster stats timer
+	function setStats (cb) {
+		self.setClusterStats(function (err) {
+			if (err) {
+				library.logger.error('Cluster stats timer', err);
+			}
+			return setImmediate(cb);
+		});
+	}
+	
+	jobsQueue.register('setClusterStats', setStats, constants.blockTime);	
 };
 
 // Shared API
@@ -666,7 +683,7 @@ Locks.prototype.shared = {
 			if (err) {
 				return setImmediate(cb, err[0].message);
 			}
-			self.getClusterStats(req.body.timestamp, function (err, lockedBytes, clusterSize) {
+			self.getClusterStats(req.body.timestamp, false, function (err, lockedBytes, clusterSize) {
 				if (err) {
 					return setImmediate(cb, err);
 				}

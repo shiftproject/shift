@@ -341,7 +341,7 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 		}
 
 		if (version > 0) {
-			modules.locks.getClusterStats(null, function (err, lockedBytes, clusterSize) {
+			modules.locks.getClusterStats(null, false, function (err, lockedBytes, clusterSize) {
 				if (err) {
 					return setImmediate(cb, 'Unable to forge because of incomplete cluster stats');
 				}
