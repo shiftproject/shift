@@ -107,9 +107,8 @@ Block.prototype.create = function (data) {
 		payloadHash.update(bytes);
 	}
 
-	var version = data.hasOwnProperty('version') && 
-		typeof data.version === 'number' && 
-		Math.floor(data.version) === data.version ? data.version : 0;
+	var version = typeof data.version !== 'undefined' && 
+		Number.isInteger(data.version) ? data.version : 0;
 
 	var block = {
 		version: version,
@@ -185,7 +184,7 @@ Block.prototype.getBytes = function (block) {
 		bb.writeLong(block.totalFee);
 		bb.writeLong(block.reward);
 
-		if (block.version === 1) {
+		if (block.version > 0) {
 			bb.writeLong(block.lockedBytes);
 			bb.writeLong(block.clusterSize);
 		}
@@ -416,7 +415,7 @@ Block.prototype.objectNormalize = function (block) {
 		}
 	}
 
-	if (block.version === 1) {
+	if (block.version > 0) {
 		if (!Block.prototype.schema.required.hasOwnProperty('lockedBytes')) {
 			Block.prototype.schema.required.push('lockedBytes');
 		}

@@ -77,7 +77,7 @@ function Locks (cb, scope) {
  * @returns {setImmediateCallback} error | data: {balance}
  */
 Locks.prototype.getLockedBalance = function (publicKey, cb) {
-	library.db.query(sql.getLockedBalance, {publicKey: publicKey}).then(function (rows) {
+	library.db.query(sql.getLockedBalance, {publicKey: publicKey.toString('hex')}).then(function (rows) {
 		var balance = 0;
 		if (rows.length > 0) {
 			balance = rows[0].locked_balance;
@@ -117,7 +117,7 @@ Locks.prototype.getTotalLockedBalance = function (cb) {
  * @returns {setImmediateCallback} error | data: {bytes}
  */
 Locks.prototype.getLockedBytes = function (publicKey, cb) {
-	library.db.query(sql.getLockedBytes, {publicKey: publicKey}).then(function (rows) {
+	library.db.query(sql.getLockedBytes, {publicKey: publicKey.toString('hex')}).then(function (rows) {
 		var bytes = 0;
 		if (rows.length > 0) {
 			bytes = rows[0].locked_bytes;
@@ -168,10 +168,10 @@ Locks.prototype.getReplication = function () {
  * @return {setImmediateCallback} error description | lockedBytes, clusterSize
  */
 Locks.prototype.getClusterStats = function (timestamp, blockStats, cb) {
-	var lastBlock = modules.blocks.lastBlock.get();
-
 	if (timestamp && blockStats) {
 		// Lookup stats in blocks, to validate trs
+		var lastBlock = modules.blocks.lastBlock.get();
+
 		library.db.query(sql.getBlockStats, {timestamp: timestamp}).then(function (blocks) {
 			if (!blocks.length) {
 				return setImmediate(cb, 'Block stats not found');
@@ -219,16 +219,21 @@ Locks.prototype.getClusterSize = function (timestamp, cb) {
 		var totals = [];
 		if (rows.length > 0 && rows.length >= constants.blockStatsInterval) {
 			rows.forEach(function(stat){
-				if (timestamp && stat.stats_timestamp < timestamp) {
-					err = 'Not enough recent stats available';
-					return false;
+				if (timestamp) {
+					var blockSlotNumber = slots.getSlotNumber(timestamp) - 1;
+					var lastRoundTime = slots.getSlotTime(blockSlotNumber > constants.activeDelegates ? blockSlotNumber - constants.activeDelegates : constants.activeDelegates);
+				
+					if (stat.stats_timestamp < lastRoundTime || stat.stats_timestamp > timestamp) {
+						err = 'Not enough recent stats available';
+						return false;
+					}
 				}
 				totals.push(stat.latest_cluster_total);
 				// console.log('stat', stat.id, stat.latest_cluster_total);
 			});
 
 			// Remove latest snapshot from desc list
-			if (totals.length == constants.blockStatsInterval){
+			if (totals.length == constants.blockStatsInterval) {
 				totals.splice(0, 1);
 				debug.splice(0, 1);
 			}
@@ -256,10 +261,6 @@ Locks.prototype.getClusterSize = function (timestamp, cb) {
  * @return {setImmediateCallback} err | cb
  */
 Locks.prototype.setClusterStats = function (cb) {
-	if (!self.isLoaded()) {
-		return cb();
-	}
-
 	var slotNumber = slots.getSlotNumber();
 	var slotToSave = Math.floor(slotNumber % 100 / constants.blockStatsInterval) * constants.blockStatsInterval || 100;
 	var lastRound = Math.floor(slotNumber / constants.activeDelegates);
@@ -462,7 +463,7 @@ Locks.prototype.onBind = function (scope) {
 			return setImmediate(cb);
 		});
 	}
-	
+
 	jobsQueue.register('setClusterStats', setStats, constants.blockTime);	
 };
 

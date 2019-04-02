@@ -37,7 +37,7 @@ module.exports = {
 	/**
 	 * @property {number} interval - Slot time interval in seconds.
 	 */
-	interval: Math.floor(constants.blockTime / 1000),
+	interval: constants.blockTime / 1000,
 	
 	/**
 	 * @property {number} delegates - Active delegates from constants.

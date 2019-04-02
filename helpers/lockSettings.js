@@ -14,7 +14,7 @@ var __private = {};
  * @throws Invalid block height
  */
 __private.parseHeight = function (height) {
-	if (isNaN(height)) {
+	if (!Number.isInteger(height) || height < 1) {
 		throw 'Invalid block height';
 	} else {
 		return Math.abs(height);

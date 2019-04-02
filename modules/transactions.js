@@ -292,7 +292,7 @@ __private.getVotesById = function (transaction, cb) {
  * @returns {setImmediateCallback} error | data: {bytes, transactionId}
  */
 __private.getLockById = function (transaction, cb) {
-	library.db.query(sql.getLockById, {id: transaction.id}).then(function (rows) {
+	library.db.query(sql.getLocksById, {id: transaction.id}).then(function (rows) {
 		if (!rows.length) {
 			return setImmediate(cb, 'Lock transaction not found');
 		}
@@ -314,7 +314,7 @@ __private.getLockById = function (transaction, cb) {
  * @returns {setImmediateCallback} error | data: {hash, size, transactionId}
  */
 __private.getPinById = function (transaction, cb) {
-	library.db.query(sql.getPinById, {id: transaction.id}).then(function (rows) {
+	library.db.query(sql.getPinsById, {id: transaction.id}).then(function (rows) {
 		if (!rows.length) {
 			return setImmediate(cb, 'Pin transaction not found');
 		}

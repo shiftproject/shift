@@ -494,10 +494,7 @@ Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateS
 			return setImmediate(seriesCb);
 		},
 		verifyClusterStats: function (seriesCb) {
-			var blockSlotNumber = slots.getSlotNumber(block.timestamp) - 1;
-			var blockSlotTime = slots.getSlotTime(blockSlotNumber > constants.activeDelegates ? blockSlotNumber - constants.activeDelegates : constants.activeDelegates);
-
-			modules.locks.getClusterStats(blockSlotTime, false, function (err, lockedBytes, totalBytes) {
+			modules.locks.getClusterStats(block.timestamp, false, function (err, lockedBytes, totalBytes) {
 				// Skip verifying if there are not enough recent stats available
 				if (err) {
 					return setImmediate(seriesCb);

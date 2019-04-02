@@ -247,7 +247,7 @@ Lock.prototype.calcLockBytes = function (height, amount, timestamp, cb) {
 
 		var available = freeBytes - lockBytes;
 		if (available < 0) {
-			return setImmediate(cb, "Not enough free bytes available: " + (available * -1));
+			return setImmediate(cb, "Not enough storage in the cluster available: " + (available * -1) + ". Please lock a smaller amount or try again later.");
 		}
 
 		return setImmediate(cb, null, lockBytes);

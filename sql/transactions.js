@@ -48,9 +48,9 @@ var TransactionsSql = {
 
   getVotesById: 'SELECT * FROM votes WHERE "transactionId" = ${id}',
 
-  getLockById: 'SELECT * FROM locks WHERE "transactionId" = ${id}',
+  getLocksById: 'SELECT * FROM locks WHERE "transactionId" = ${id}',
 
-  getPinById: 'SELECT * FROM pins WHERE "transactionId" = ${id}'
+  getPinsById: 'SELECT * FROM pins WHERE "transactionId" = ${id}'
 
 };
 

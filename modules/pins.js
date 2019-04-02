@@ -73,7 +73,7 @@ function Pins (cb, scope) {
  * @returns {setImmediateCallback} error | data: {bytes}
  */
 Pins.prototype.getPinnedBytes = function (publicKey, cb) {
-	library.db.query(sql.getPinnedBytes, {publicKey: publicKey}).then(function (rows) {
+	library.db.query(sql.getPinnedBytes, {publicKey: publicKey.toString('hex')}).then(function (rows) {
 		if (!rows.length) {
 			return setImmediate(cb, 0);
 		}
