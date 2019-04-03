@@ -10,6 +10,7 @@ var httpApi = require('../../helpers/httpApi');
  * 	- get	/fee
  * 	- get	/bytes
  * 	- get	/verify
+ * 	- get	/parent
  * @memberof module:pins
  * @requires helpers/Router
  * @requires helpers/httpApi
@@ -28,7 +29,8 @@ function PinsHttpApi (pinsModule, app, logger, cache) {
 	router.map(pinsModule.shared, {
 		'get /fee': 'getFee',
 		'get /bytes': 'getPinnedBytes',
-		'get /verify': 'verifyPin'
+		'get /verify': 'verifyPin',
+		'get /parent': 'getPinsByParent'
 	});
 
 	httpApi.registerEndpoint('/api/pins', app, router, pinsModule.isLoaded);

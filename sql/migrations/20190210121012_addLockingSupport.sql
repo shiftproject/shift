@@ -102,6 +102,7 @@ SELECT b."id" AS "b_id",
        (lock."bytes")::bigint AS "l_bytes",
        pin."hash" AS "p_hash",
        (pin."bytes")::bigint AS "p_bytes",
+       pin."parent" AS "p_parent",
        ENCODE(t."requesterPublicKey", 'hex') AS "t_requesterPublicKey",
        t."signatures" AS "t_signatures"
 

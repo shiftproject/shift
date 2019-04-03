@@ -27,11 +27,12 @@ function Pin (schema, logger) {
  * @param {Accounts} accounts
  * @param {Rounds} rounds
  */
-Pin.prototype.bind = function (accounts, system, rounds, locks, pins) {
+Pin.prototype.bind = function (accounts, system, rounds, transactions, locks, pins) {
 	modules = {
 		accounts: accounts,
 		system: system,
 		rounds: rounds,
+		transactions: transactions,
 		locks: locks,
 		pins: pins
 	};
@@ -128,7 +129,21 @@ Pin.prototype.verify = function (trs, sender, cb) {
 						var err = 'Not enough locked bytes available';
 					}
 
-					return setImmediate(cb, err, trs);
+					if (!trs.asset.pin.parent) {
+						return setImmediate(cb, err, trs);
+					} else {
+						modules.transactions.getById(trs.asset.pin.parent, function (err, transaction) {
+							if (!transaction || err) {
+								return setImmediate(cb, 'Parent transaction not found');
+							}
+
+							if (transaction.senderPublicKey !== trs.senderPublicKey) {
+								var err = 'Sender of parent transaction does not match';
+							}
+
+							return setImmediate(cb, err, trs);
+						});
+					}
 				});
 			});
 		} else if (trs.type === transactionTypes.UNPIN) {
@@ -172,6 +187,14 @@ Pin.prototype.getBytes = function (trs) {
 		var byteBuf = new ByteBuffer(8, true);
 		byteBuf.writeUint64(trs.asset.pin.bytes, 0);
 		var arrayBuf = Buffer.from(new Uint8Array(byteBuf.toArrayBuffer()));
+
+		if (trs.asset.pin.parent) {
+			var parentBuf = new ByteBuffer(8, true);
+			parentBuf.writeUint64(trs.asset.pin.parent, 0);
+			parentBuf = Buffer.from(new Uint8Array(parentBuf.toArrayBuffer()));
+
+			arrayBuf = Buffer.concat([arrayBuf, parentBuf]);
+		}
 		
 		buf = Buffer.concat([buf, arrayBuf]);
 	} catch (e) {
@@ -329,9 +352,15 @@ Pin.prototype.schema = {
 			type: 'integer',
 			minimum: 0,
 			maximum: Number.MAX_SAFE_INTEGER
+		},
+		parent: {
+			type: 'string',
+			format: 'id',
+			minLength: 1,
+			maxLength: 20
 		}
 	},
-	required: ['bytes']
+	required: ['hash', 'bytes']
 };
 
 /**
@@ -363,7 +392,8 @@ Pin.prototype.dbRead = function (raw) {
 	} else {
 		var data = {
 			hash: raw.p_hash,
-			bytes: Math.round(raw.p_bytes)
+			bytes: Math.round(raw.p_bytes),
+			parent: raw.p_parent
 		};
 
 		return {pin: data};
@@ -375,6 +405,7 @@ Pin.prototype.dbTable = 'pins';
 Pin.prototype.dbFields = [
 	'hash',
 	'bytes',
+	'parent',
 	'transactionId'
 ];
 
@@ -389,6 +420,7 @@ Pin.prototype.dbSave = function (trs) {
 		values: {
 			hash: trs.asset.pin.hash,
 			bytes: trs.asset.pin.bytes,
+			parent: trs.asset.pin.parent,
 			transactionId: trs.id
 		}
 	};

@@ -229,28 +229,6 @@ __private.list = function (filter, cb) {
 };
 
 /**
- * Gets transaction by id from `trs_list` view.
- * @private
- * @param {string} id
- * @param {function} cb - Callback function.
- * @returns {setImmediateCallback} error | data: {transaction}
- */
-__private.getById = function (id, cb) {
-	library.db.query(sql.getById, {id: id}).then(function (rows) {
-		if (!rows.length) {
-			return setImmediate(cb, 'Transaction not found: ' + id);
-		}
-
-		var transaction = library.logic.transaction.dbRead(rows[0]);
-
-		return setImmediate(cb, null, transaction);
-	}).catch(function (err) {
-		library.logger.error(err.stack);
-		return setImmediate(cb, 'Transactions#getById error');
-	});
-};
-
-/**
  * Gets votes asset by transaction id from `votes` table.
  * @private
  * @param {transaction} transaction
@@ -387,6 +365,26 @@ __private.getPooledTransactions = function (method, req, cb) {
 };
 
 // Public methods
+/**
+ * Gets transaction by id from `trs_list` view.
+ * @param {string} id
+ * @param {function} cb - Callback function.
+ * @returns {setImmediateCallback} error | data: {transaction}
+ */
+Transactions.prototype.getById = function (id, cb) {
+	library.db.query(sql.getById, {id: id}).then(function (rows) {
+		if (!rows.length) {
+			return setImmediate(cb, 'Transaction not found: ' + id);
+		}
+
+		var transaction = library.logic.transaction.dbRead(rows[0]);
+
+		return setImmediate(cb, null, transaction);
+	}).catch(function (err) {
+		library.logger.error(err.stack);
+		return setImmediate(cb, 'Transactions#getById error');
+	});
+};
 /**
  * Check if transaction is in pool
  * @param {string} id
@@ -703,7 +701,7 @@ Transactions.prototype.shared = {
 				return setImmediate(cb, err[0].message);
 			}
 
-			__private.getById(req.body.id, function (err, transaction) {
+			self.getById(req.body.id, function (err, transaction) {
 				if (!transaction || err) {
 					return setImmediate(cb, 'Transaction not found');
 				}
@@ -722,7 +720,7 @@ Transactions.prototype.shared = {
 				} else if (transaction.type === transactionTypes.PIN || transaction.type === transactionTypes.UNPIN) {
 					__private.getPinById(transaction, function (err, pin) {
 						if (!err && pin.bytes) {
-							transaction.asset.pin = { hash: pin.hash, bytes: pin.bytes };
+							transaction.asset.pin = { hash: pin.hash, bytes: pin.bytes, parent: pin.parent };
 						}
 						return setImmediate(cb, null, {transaction: transaction});
 					});

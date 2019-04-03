@@ -64,50 +64,69 @@ function Pins (cb, scope) {
 	setImmediate(cb, null, self);
 }
 
+// Private methods
+/**
+ * Gets pin transactions by parent ID
+ * @private
+ * @param {string} parent, type
+ * @param {function} cb - Callback function.
+ * @returns {setImmediateCallback} error | data: {pins}
+ */
+__private.getPinsByParent = function (id, type, cb) {
+	library.db.query(sql.getPinsByParent, {parent: id, type: type}).then(function (pins) {
+		if (!pins.length) {
+			return setImmediate(cb, 'No pin transactions found with parent: ' + id);
+		}
+
+		return setImmediate(cb, null, pins);
+	}).catch(function (err) {
+		library.logger.error(err.stack);
+		return setImmediate(cb, 'Pins#getPinsByParent error');
+	});
+};
+
 // Public methods
 /**
  * Gets the total amount of pinned bytes for an account
- * @private
  * @param {string} publicKey
  * @param {function} cb - Callback function.
  * @returns {setImmediateCallback} error | data: {bytes}
  */
 Pins.prototype.getPinnedBytes = function (publicKey, cb) {
-	library.db.query(sql.getPinnedBytes, {publicKey: publicKey.toString('hex')}).then(function (rows) {
-		if (!rows.length) {
+	library.db.query(sql.getPinnedBytes, {publicKey: publicKey.toString('hex')}).then(function (pins) {
+		if (!pins.length) {
 			return setImmediate(cb, 0);
 		}
 
-		var bytes = rows[0].pinned_bytes;
+		var bytes = pins[0].pinned_bytes;
 
 		return setImmediate(cb, null, bytes);
 	}).catch(function (err) {
 		library.logger.error(err.stack);
-		return setImmediate(cb, 'Transactions#getPinnedBytes error');
+		return setImmediate(cb, 'Pins#getPinnedBytes error');
 	});
 };
 
 /**
  * Gets the most recent pin
- * @private
  * @param {string} hash
  * @param {int} bytes
  * @param {string} senderId
  * @param {function} cb - Callback function.
  * @returns {setImmediateCallback} error | data: {pin}
  */
-Pins.prototype.getMostRecentPin = function (hash, address, cb) {
-	library.db.query(sql.getMostRecentPin, {assetHash: hash, senderId: address}).then(function (rows) {
-		if (!rows.length) {
-			return setImmediate(cb, 'Pin transaction not found: ' + hash);
+Pins.prototype.getMostRecentPin = function (hash, senderId, cb) {
+	library.db.query(sql.getMostRecentPin, {hash: hash, senderId: senderId}).then(function (pins) {
+		if (!pins.length) {
+			return setImmediate(cb, 'Pin transaction not found: ' + hash + ' with sender ' + senderId);
 		}
 
-		var transaction = rows[0];
+		var pin = pins[0];
 
-		return setImmediate(cb, null, transaction);
+		return setImmediate(cb, null, pin);
 	}).catch(function (err) {
 		library.logger.error(err.stack);
-		return setImmediate(cb, 'Transactions#getMostRecentPin error');
+		return setImmediate(cb, 'Pins#getMostRecentPin error');
 	});
 };
 
@@ -148,6 +167,7 @@ Pins.prototype.onBind = function (scope) {
 		scope.accounts,
 		scope.system,
 		scope.rounds,
+		scope.transactions,
 		scope.locks,
 		self
 	);
@@ -314,8 +334,22 @@ Pins.prototype.shared = {
 				if (err) {
 					return setImmediate(cb, err);
 				}
-				
+
 				return setImmediate(cb, null, {bytes: (bytes * replication)});
+			});
+		});
+	},
+	getPinsByParent: function (req, cb) {
+		library.schema.validate(req.body, schema.getPinsByParent, function (err) {
+			if (err) {
+				return setImmediate(cb, err[0].message);
+			}
+			__private.getPinsByParent(req.body.id, transactionTypes.PIN, function (err, transactions) {
+				if (err) {
+					return setImmediate(cb, err);
+				}
+
+				return setImmediate(cb, null, transactions);
 			});
 		});
 	}

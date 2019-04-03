@@ -10,7 +10,7 @@ module.exports = {
 				minimum: 1
 			}
 		}
-	},	
+	},
 	verifyPin: {
 		id: 'pins.verifyPin',
 		type: 'object',
@@ -43,5 +43,16 @@ module.exports = {
 			},
 		},
 		required: ['publicKey']
+	},
+	getPinsByParent: {
+		properties: {
+			id: {
+				type: 'string',
+				format: 'id',
+				minLength: 1,
+				maxLength: 20
+			}
+		},
+		required: ['id']
 	}
 };
