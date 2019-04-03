@@ -93,7 +93,7 @@ __private.getPinsByParent = function (id, type, cb) {
  * @returns {setImmediateCallback} error | data: {bytes}
  */
 Pins.prototype.getPinnedBytes = function (publicKey, cb) {
-	library.db.query(sql.getPinnedBytes, {publicKey: publicKey.toString('hex')}).then(function (pins) {
+	library.db.query(sql.getPinnedBytes, {publicKey: publicKey}).then(function (pins) {
 		if (!pins.length) {
 			return setImmediate(cb, 0);
 		}
@@ -160,7 +160,7 @@ Pins.prototype.onBind = function (scope) {
 		accounts: scope.accounts,
 		system: scope.system,
 		transactions: scope.transactions,
-		blocks: scope.blocks
+		locks: scope.locks
 	};
 
 	__private.pin.bind(
@@ -209,7 +209,7 @@ Pins.prototype.shared = {
 				}
 			}
 
-			library.balancesSequence.add(function (cb) {				
+			library.balancesSequence.add(function (cb) {
 				if (req.body.multisigAccountPublicKey && req.body.multisigAccountPublicKey !== keypair.publicKey.toString('hex')) {
 					modules.accounts.getAccount({publicKey: req.body.multisigAccountPublicKey}, function (err, account) {
 						if (err) {

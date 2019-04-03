@@ -4,8 +4,8 @@ var LocksSql = {
 	getByIds: 'SELECT * FROM locks WHERE "transactionId" IN ($1:csv)',
 	getTotalLockedBalance: 'SELECT SUM("locked_balance") FROM mem_accounts',
 	getTotalLockedBytes: 'SELECT SUM("locked_bytes") FROM mem_accounts',
-	getLockedBalance: 'SELECT "locked_balance" FROM mem_accounts WHERE "publicKey" = ${publicKey}',
-	getLockedBytes: 'SELECT "locked_bytes" FROM mem_accounts WHERE "publicKey" = ${publicKey}',
+	getLockedBalance: 'SELECT "locked_balance" FROM mem_accounts WHERE "publicKey" = DECODE(${publicKey}, \'hex\')',
+	getLockedBytes: 'SELECT "locked_bytes" FROM mem_accounts WHERE "publicKey" = DECODE(${publicKey}, \'hex\')',
 	getClusterStats: 'SELECT * FROM mem_cluster_stats ORDER BY "stats_timestamp" DESC LIMIT ${limit}',
 	setClusterStats: 'INSERT INTO mem_cluster_stats '+
 	'("id","total_locked_balance","total_locked_bytes","latest_cluster_total","latest_cluster_used","stats_timestamp") '+

@@ -77,7 +77,7 @@ function Locks (cb, scope) {
  * @returns {setImmediateCallback} error | data: {balance}
  */
 Locks.prototype.getLockedBalance = function (publicKey, cb) {
-	library.db.query(sql.getLockedBalance, {publicKey: publicKey.toString('hex')}).then(function (rows) {
+	library.db.query(sql.getLockedBalance, {publicKey: publicKey}).then(function (rows) {
 		var balance = 0;
 		if (rows.length > 0) {
 			balance = rows[0].locked_balance;
@@ -117,7 +117,7 @@ Locks.prototype.getTotalLockedBalance = function (cb) {
  * @returns {setImmediateCallback} error | data: {bytes}
  */
 Locks.prototype.getLockedBytes = function (publicKey, cb) {
-	library.db.query(sql.getLockedBytes, {publicKey: publicKey.toString('hex')}).then(function (rows) {
+	library.db.query(sql.getLockedBytes, {publicKey: publicKey}).then(function (rows) {
 		var bytes = 0;
 		if (rows.length > 0) {
 			bytes = rows[0].locked_bytes;
