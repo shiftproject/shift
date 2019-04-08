@@ -222,5 +222,5 @@ module.exports = {
 			}
 		},
 		required: ['secret', 'amount', 'recipientId']
-	}	
+	}
 };

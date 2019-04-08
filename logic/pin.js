@@ -110,6 +110,10 @@ Pin.prototype.verify = function (trs, sender, cb) {
 			mostRecentPin = false;
 		}
 
+		if (mostRecentPin.timestamp > trs.timestamp) {
+			return setImmediate(cb, "Timestamp cannot be older than the previous pin");
+		}
+
 		if (trs.type === transactionTypes.PIN) {
 			if (mostRecentPin && mostRecentPin.type === transactionTypes.PIN) {
 				return setImmediate(cb, "Can not pin a hash you have already pinned");

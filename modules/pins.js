@@ -73,12 +73,23 @@ function Pins (cb, scope) {
  * @returns {setImmediateCallback} error | data: {pins}
  */
 __private.getPinsByParent = function (id, type, cb) {
-	library.db.query(sql.getPinsByParent, {parent: id, type: type}).then(function (pins) {
+	library.db.query(sql.getPinsByParent, {parent: id}).then(function (pins) {
 		if (!pins.length) {
 			return setImmediate(cb, 'No pin transactions found with parent: ' + id);
 		}
 
-		return setImmediate(cb, null, pins);
+		var result = [];
+		pins.forEach(function(pin) {
+			if ((!type || pin.latest === type) && (pin.latest === transactionTypes.PIN || pin.latest === transactionTypes.UNPIN)) {
+				result.push(pin);
+			}
+		});
+
+		if (type === transactionTypes.PIN && !result.length) {
+			return setImmediate(cb, 'Content with parent: ' + id + 'is unpinned');
+		}
+
+		return setImmediate(cb, null, result);
 	}).catch(function (err) {
 		library.logger.error(err.stack);
 		return setImmediate(cb, 'Pins#getPinsByParent error');
@@ -344,7 +355,7 @@ Pins.prototype.shared = {
 			if (err) {
 				return setImmediate(cb, err[0].message);
 			}
-			__private.getPinsByParent(req.body.id, transactionTypes.PIN, function (err, transactions) {
+			__private.getPinsByParent(req.body.id, req.body.type, function (err, transactions) {
 				if (err) {
 					return setImmediate(cb, err);
 				}
