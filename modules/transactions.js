@@ -267,17 +267,17 @@ __private.getVotesById = function (transaction, cb) {
  * @private
  * @param {transaction} transaction
  * @param {function} cb - Callback function.
- * @returns {setImmediateCallback} error | data: {bytes, transactionId}
+ * @returns {setImmediateCallback} error | lock: {bytes, transactionId}
  */
 __private.getLockById = function (transaction, cb) {
-	library.db.query(sql.getLocksById, {id: transaction.id}).then(function (rows) {
-		if (!rows.length) {
+	library.db.query(sql.getLocksById, {id: transaction.id}).then(function (locks) {
+		if (locks.length === 0) {
 			return setImmediate(cb, 'Lock transaction not found');
 		}
 
-		var transaction = rows[0];
+		var lock = locks[0];
 
-		return setImmediate(cb, null, transaction);
+		return setImmediate(cb, null, lock);
 	}).catch(function (err) {
 		library.logger.error(err.stack);
 		return setImmediate(cb, 'Transactions#getLockById error');
@@ -289,17 +289,17 @@ __private.getLockById = function (transaction, cb) {
  * @private
  * @param {transaction} transaction
  * @param {function} cb - Callback function.
- * @returns {setImmediateCallback} error | data: {hash, size, transactionId}
+ * @returns {setImmediateCallback} error | pin: {hash, size, transactionId, parent}
  */
 __private.getPinById = function (transaction, cb) {
-	library.db.query(sql.getPinsById, {id: transaction.id}).then(function (rows) {
-		if (!rows.length) {
+	library.db.query(sql.getPinsById, {id: transaction.id}).then(function (pins) {
+		if (pins.length === 0) {
 			return setImmediate(cb, 'Pin transaction not found');
 		}
 
-		var transaction = rows[0];
+		var pin = pins[0];
 
-		return setImmediate(cb, null, transaction);
+		return setImmediate(cb, null, pin);
 	}).catch(function (err) {
 		library.logger.error(err.stack);
 		return setImmediate(cb, 'Transactions#getPinById error');

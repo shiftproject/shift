@@ -50,12 +50,6 @@ function TransactionsHttpApi (transactionsModule, app, logger, cache) {
 		'get /multisignatures': 'getMultisignatureTransactions',
 		'get /unconfirmed/get': 'getUnconfirmedTransaction',
 		'get /unconfirmed': 'getUnconfirmedTransactions',
-		'get /locks': 'getLockTransaction',
-		'get /locks/get': 'getLockTransaction',
-		'get /pins': 'getPinTransaction',
-		'get /pins/get': 'getPinTransaction',
-		'get /pins/getBytes': 'getPinnedBytes',
-		'put /pins/verify': 'verifyPin',
 		'put /': 'addTransactions'
 	});
 

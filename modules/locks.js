@@ -97,7 +97,7 @@ Locks.prototype.getLockedBalance = function (publicKey, cb) {
  */
 Locks.prototype.getTotalLockedBalance = function (cb) {
 	library.db.query(sql.getTotalLockedBalance).then(function (rows) {
-		if (!rows.length) {
+		if (rows.length === 0) {
 			return setImmediate(cb, null, 0);
 		}
 
@@ -137,7 +137,7 @@ Locks.prototype.getLockedBytes = function (publicKey, cb) {
  */
 Locks.prototype.getTotalLockedBytes = function (cb) {
 	library.db.query(sql.getTotalLockedBytes).then(function (rows) {
-		if (!rows.length) {
+		if (rows.length === 0) {
 			return setImmediate(cb, null, 0);
 		}
 
@@ -173,7 +173,7 @@ Locks.prototype.getClusterStats = function (timestamp, blockStats, cb) {
 		var lastBlock = modules.blocks.lastBlock.get();
 
 		library.db.query(sql.getBlockStats, {timestamp: timestamp}).then(function (blocks) {
-			if (!blocks.length) {
+			if (blocks.length === 0) {
 				return setImmediate(cb, 'Block stats not found');
 			}
 			var block = blocks[0];
@@ -486,113 +486,6 @@ Locks.prototype.shared = {
 			};
 			delete f.fees;
 			return setImmediate(cb, null, f);
-		});
-	},
-	addLock: function (req, cb) {
-		library.schema.validate(req.body, schema.addLock, function (err) {
-			if (err) {
-				return setImmediate(cb, err[0].message);
-			}
-
-			var hash = crypto.createHash('sha256').update(req.body.secret, 'utf8').digest();
-			var keypair = library.ed.makeKeypair(hash);
-
-			if (req.body.publicKey) {
-				if (keypair.publicKey.toString('hex') !== req.body.publicKey) {
-					return setImmediate(cb, 'Invalid passphrase');
-				}
-			}
-
-			library.balancesSequence.add(function (cb) {
-				if (req.body.multisigAccountPublicKey && req.body.multisigAccountPublicKey !== keypair.publicKey.toString('hex')) {
-					modules.accounts.getAccount({publicKey: req.body.multisigAccountPublicKey}, function (err, account) {
-						if (err) {
-							return setImmediate(cb, err);
-						}
-
-						if (!account || !account.publicKey) {
-							return setImmediate(cb, 'Multisignature account not found');
-						}
-
-						if (!account.Multisignatures || !account.Multisignatures) {
-							return setImmediate(cb, 'Account does not have Multisignatures enabled');
-						}
-
-						if (account.Multisignatures.indexOf(keypair.publicKey.toString('hex')) < 0) {
-							return setImmediate(cb, 'Account does not belong to Multisignature group');
-						}
-
-						modules.accounts.getAccount({publicKey: keypair.publicKey}, function (err, requester) {
-							if (err) {
-								return setImmediate(cb, err);
-							}
-
-							if (!requester || !requester.publicKey) {
-								return setImmediate(cb, 'Requester not found');
-							}
-
-							if (requester.secondLock && !req.body.secondSecret) {
-								return setImmediate(cb, 'Missing requester second passphrase');
-							}
-
-							if (requester.publicKey === account.publicKey) {
-								return setImmediate(cb, 'Invalid requester public key');
-							}
-
-							var secondHash = crypto.createHash('sha256').update(req.body.secondSecret, 'utf8').digest();
-							var secondKeypair = library.ed.makeKeypair(secondHash);
-							var transaction;
-
-							try {
-								transaction = library.logic.transaction.create({
-									type: req.body.type === transactionTypes.LOCK ? transactionTypes.LOCK : transactionTypes.UNLOCK,
-									sender: account,
-									keypair: keypair,
-									requester: keypair,
-									secondKeypair: secondKeypair
-								});
-							} catch (e) {
-								return setImmediate(cb, e.toString());
-							}
-
-							modules.transactions.receiveTransactions([transaction], true, cb);
-						});
-					});
-				} else {
-					modules.accounts.setAccountAndGet({publicKey: keypair.publicKey.toString('hex')}, function (err, account) {
-						if (err) {
-							return setImmediate(cb, err);
-						}
-
-						if (!account || !account.publicKey) {
-							return setImmediate(cb, 'Account not found');
-						}
-
-						var secondHash = crypto.createHash('sha256').update(req.body.secondSecret, 'utf8').digest();
-						var secondKeypair = library.ed.makeKeypair(secondHash);
-						var transaction;
-
-						try {
-							transaction = library.logic.transaction.create({
-								type: req.body.type === transactionTypes.LOCK ? transactionTypes.LOCK : transactionTypes.UNLOCK,
-								sender: account,
-								keypair: keypair,
-								secondKeypair: secondKeypair
-							});
-						} catch (e) {
-							return setImmediate(cb, e.toString());
-						}
-						modules.transactions.receiveTransactions([transaction], true, cb);
-					});
-				}
-
-			}, function (err, transaction) {
-				if (err) {
-					return setImmediate(cb, err);
-				}
-				return setImmediate(cb, null, {transaction: transaction[0]});
-			});
-
 		});
 	},
 	calcLockBytes: function (req, cb) {

@@ -133,7 +133,7 @@ Pin.prototype.verify = function (trs, sender, cb) {
 						var err = 'Not enough locked bytes available';
 					}
 
-					if (!trs.asset.pin.parent) {
+					if (typeof trs.asset.pin.parent === 'undefined' || trs.asset.pin.parent === null) {
 						return setImmediate(cb, err, trs);
 					} else {
 						modules.transactions.getById(trs.asset.pin.parent, function (err, transaction) {
@@ -358,7 +358,7 @@ Pin.prototype.schema = {
 			maximum: Number.MAX_SAFE_INTEGER
 		},
 		parent: {
-			type: 'string',
+			type: ['string', 'null'],
 			format: 'id',
 			minLength: 1,
 			maxLength: 20
