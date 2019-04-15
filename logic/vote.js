@@ -109,7 +109,6 @@ Vote.prototype.verify = function (trs, sender, cb) {
 		if (err) {
 			return setImmediate(cb, err);
 		} else {
-
 			if (trs.asset.votes.length > _.uniqBy(trs.asset.votes, function (v) { return v.slice(1); }).length) {
 				return setImmediate(cb, 'Multiple votes for same delegate are not allowed');
 			}

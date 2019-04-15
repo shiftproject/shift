@@ -663,8 +663,9 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 		} else if (checkExists) {
 			// Check for already confirmed transaction
 			return self.checkConfirmed(trs, cb);
+		} else {
+			return setImmediate(cb);
 		}
-		return setImmediate(cb);
 	});
 };
 
@@ -786,7 +787,7 @@ Transaction.prototype.apply = function (trs, block, sender, cb) {
 	var senderBalance = this.checkBalance(amount, 'balance', trs, sender);
 	if (senderBalance.exceeded) {
 		return setImmediate(cb, senderBalance.error);
-	}	
+	}
 
 	this.scope.logger.trace('Logic/Transaction->apply', {sender: sender.address, balance: -amount, blockId: block.id, round: modules.rounds.calc(block.height)});
 	this.scope.account.merge(sender.address, {

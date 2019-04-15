@@ -50,7 +50,8 @@ Pin.prototype.create = function (data, trs) {
 
 	trs.asset.pin = {
 		hash: data.hash,
-		bytes: data.bytes
+		bytes: data.bytes,
+		parent: data.parent
 	};
 
 	return trs;

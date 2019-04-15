@@ -86,7 +86,7 @@ TransactionPool.prototype.bind = function (accounts, transactions, loader) {
 	modules = {
 		accounts: accounts,
 		transactions: transactions,
-		loader: loader,
+		loader: loader
 	};
 };
 
@@ -759,7 +759,28 @@ __private.processVerifyTransaction = function (transaction, broadcast, cb) {
 					return setImmediate(waterCb, null, sender);
 				}
 			});
-		}
+		},
+		function assetExists (sender, waterCb) {
+			if (transaction.type === transactionTypes.PIN || transaction.type === transactionTypes.UNPIN) {
+				var transactions = self.getUnconfirmedTransactionList(true, constants.maxTxsPerBlock);
+				async.eachSeries(transactions, function (trs, eachSeriesCb) {
+					if (transaction.senderId === trs.senderId &&
+						transaction.asset.pin.hash === trs.asset.pin.hash) {
+							return setImmediate(eachSeriesCb, 'Pin transaction is already being processed');
+					} else {
+						return setImmediate(eachSeriesCb);
+					}
+				}, function (err) {
+					if (err) {
+						return setImmediate(waterCb, err);
+					} else {
+						return setImmediate(waterCb, null, sender);
+					}
+				});
+			} else {
+				return setImmediate(waterCb, null, sender);
+			}
+		},
 	], function (err, sender) {
 		if (!err) {
 			library.bus.message('unconfirmedTransaction', transaction, broadcast);
