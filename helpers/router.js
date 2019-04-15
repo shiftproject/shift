@@ -38,7 +38,7 @@ var Router = function () {
 	 * @param {Function} middleware
 	 * @param {String} routes
 	 */
-	router.attachMiddlwareForUrls = function (middleware, routes) {
+	router.attachMiddlewareForUrls = function (middleware, routes) {
 		routes.forEach(function (entry) {
 			var route = entry.split(' ');
 

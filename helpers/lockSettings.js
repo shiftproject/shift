@@ -49,17 +49,17 @@ module.exports = {
 	 * @param {number} height
 	 * @return {number}
 	 */
-	calcCompensation: function (height, useTolerance) {
-		if (useTolerance === undefined) {
-			useTolerance = true;
+	calcCompensation: function (height, useBuffer) {
+		if (useBuffer === undefined) {
+			useBuffer = true;
 		}
 
 		var replication = this.locks[this.calcMilestone(height)].replication; // 3
 		var conversion = 1 / replication; // 0.33
 		
-		if (useTolerance) {
-			var tolerance = this.calcTolerance(height);
-			conversion = Math.round(conversion * tolerance) / tolerance; // 0.3
+		if (useBuffer) {
+			var buffer = this.calcBuffer(height);
+			conversion = Math.round(conversion * buffer) / buffer; // 0.3
 		}
 		
 		return conversion;
@@ -81,7 +81,7 @@ module.exports = {
 	 * @param {number} height
 	 * @return {number}
 	 */
-	calcTolerance: function (height) {
-		return this.locks[this.calcMilestone(height)].tolerance;
+	calcBuffer: function (height) {
+		return this.locks[this.calcMilestone(height)].buffer;
 	}
 };

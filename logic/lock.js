@@ -217,7 +217,7 @@ Lock.prototype.getBytes = function (trs) {
 Lock.prototype.calcLockBytes = function (height, amount, timestamp, cb) {
 	var compensationFactor = lockSettings.calcCompensation(height, true);
 	var ratioFactor = lockSettings.calcRatioFactor(height);
-	var tolerance = lockSettings.calcTolerance(height);
+	var buffer = lockSettings.calcBuffer(height);
 
 	if (!amount || !compensationFactor || !ratioFactor) {
 		return setImmediate(cb, "Amount is 0");
@@ -232,7 +232,7 @@ Lock.prototype.calcLockBytes = function (height, amount, timestamp, cb) {
 		totalBytes = new bignum(totalBytes).toNumber();
 
 		// Total minus used is available (10% buffer)
-		var freeBytes = (totalBytes - (totalBytes / tolerance)) - totalLockedBytes;
+		var freeBytes = (totalBytes - (totalBytes / buffer)) - totalLockedBytes;
 		if (freeBytes <= 0) {
 			return setImmediate(cb, "No free bytes available");
 		}

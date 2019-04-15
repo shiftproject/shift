@@ -42,14 +42,14 @@
  * @property {number} numberLength
  * @property {number} requestLength
  * @property {object} rewards
- * @property {number[]} rewards.milestones - Initial 5, and decreasing until 1.
+ * @property {number[]} rewards.milestones - Initial 5, and decreasing until 1
  * @property {number} rewards.offset - Start rewards at block (n).
  * @property {number} rewards.distance - Distance between each milestone
  * @property {object} locks
  * @property {number[]} locks.height
- * @property {number} locks.replication - The amount of locations the cluster will pin the data to.
+ * @property {number} locks.replication - The amount of locations the cluster will pin the data to
  * @property {number} locks.ratio_factor - Used to tune the shift-to-bytes ratio
- * @property {number} locks.tolerance - Percentage used to accept slight differences in what the sum of locks would ask, and what the network has available.
+ * @property {number} locks.buffer - Percentage for a safe buffer the network has available and the sum of all locks would ask
  * @property {number} signatureLength
  * @property {number} totalAmount
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
@@ -61,10 +61,7 @@ module.exports = {
 		{ height: 370000, ver: '^6.3.0t'},
 		{ height: 640000, ver: '^6.5.0t'},
 		{ height: 1617500, ver: '^6.8.0t'},
-		{ height: 2282000, ver: '^7.0.0t'}
-	],
-	minVersion: [
-		{ height: 1, ver: '^7.0.0t'},
+		{ height: 2725930, ver: '^7.0.0t'}
 	],
 	activeDelegates: 101,
 	addressLength: 208,
@@ -75,7 +72,7 @@ module.exports = {
 	blockReceiptTimeOut: 27 * 2, // 2 blocks
 	blockVersion: [
 		{ height: 1, ver: 0},
-		{ height: 65228, ver: 1}
+		{ height: 2725930, ver: 1}
 	],
 	confirmationLength: 77,
 	epochTime: new Date(Date.UTC(2016, 4, 24, 17, 0, 0, 0)),
@@ -92,7 +89,7 @@ module.exports = {
 			}
 		},
 		{
-			height: 2,
+			height: 2725930,
 			fees: {
 				send: 1000000,		// 0.01
 				vote: 100000000,	// 1
@@ -100,10 +97,10 @@ module.exports = {
 				delegate: 6000000000,	// 60
 				multisignature: 50000000, // 0.5
 				dapp: 2500000000,	// 25
-				lock: 1000000,		// 0.01
-				unlock: 1000000,		// 0.01
+				lock: 100000000,	// 1
+				unlock: 100000000,	// 1
 				pin: 1000000,		// 0.01
-				unpin: 1000000		// 0.01
+				unpin: 0		// 0
 			}
 		}
 	],
@@ -144,7 +141,7 @@ module.exports = {
 		{ height: 4332000,  reward: 80000000,  salary: 9000000 }
 	],
 	locks: [
-		{ height: 1, replication: 3, ratio_factor: 100, tolerance: 10 }
+		{ height: 1, replication: 3, ratio_factor: 100, buffer: 10 }
 	],
 	signatureLength: 196,
 	totalAmount: 1009000000000000,
