@@ -193,10 +193,9 @@ System.prototype.versionCompatible = function (version) {
 	var rangeRegExp = /[\^~\*]/;
 	if (this.minVersionChar && versionChar && !rangeRegExp.test(this.minVersion)) {
 		return (version + versionChar) === (this.minVersion + this.minVersionChar);
+	} else {
+		return semver.satisfies(version, this.minVersion);
 	}
-
-	// ignore versionChar, check only version
-	return semver.satisfies(version, this.minVersion);
 };
 
 /**

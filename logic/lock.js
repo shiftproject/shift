@@ -141,8 +141,7 @@ Lock.prototype.verify = function (trs, sender, cb) {
 			var unlockBytes = new bignum(bytes.toString()).toNumber();
 
 			modules.locks.getLockedBytes(publicKey, function (err, bytes) {
-				console.log('logic.getLockedBytes', bytes);
-				if (err/* || !bytes*/) {
+				if (err) {
 					return cb('getLockedBytes error: ' + err);
 				}
 
@@ -153,8 +152,6 @@ Lock.prototype.verify = function (trs, sender, cb) {
 				}
 
 				modules.pins.getPinnedBytes(publicKey, function (err, bytes) {
-					console.log('logic.lock getPinnedBytes', bytes);
-
 					var pinnedBytes = new bignum(bytes.toString()).toNumber();
 					var availableLockedBytes = lockedBytes - pinnedBytes;
 

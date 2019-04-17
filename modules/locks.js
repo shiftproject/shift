@@ -222,20 +222,18 @@ Locks.prototype.getClusterSize = function (timestamp, cb) {
 				if (timestamp) {
 					var blockSlotNumber = slots.getSlotNumber(timestamp) - 1;
 					var lastRoundTime = slots.getSlotTime(blockSlotNumber > constants.activeDelegates ? blockSlotNumber - constants.activeDelegates : constants.activeDelegates);
-				
+
 					if (stat.stats_timestamp < lastRoundTime || stat.stats_timestamp > timestamp) {
 						err = 'Not enough recent stats available';
 						return false;
 					}
 				}
 				totals.push(stat.latest_cluster_total);
-				// console.log('stat', stat.id, stat.latest_cluster_total);
 			});
 
 			// Remove latest snapshot from desc list
 			if (totals.length == constants.blockStatsInterval) {
 				totals.splice(0, 1);
-				debug.splice(0, 1);
 			}
 
 			// Sort values asc
