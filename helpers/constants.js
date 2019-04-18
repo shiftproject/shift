@@ -90,6 +90,17 @@ module.exports = {
 			}
 		},
 		{
+			height: 640000,
+			fees: {
+				send: 1000000,		// 0.01
+				vote: 100000000,	// 1
+				secondsignature: 10000000,	// 0.1
+				delegate: 6000000000,	// 60
+				multisignature: 50000000, // 0.5
+				dapp: 2500000000	//25
+			}
+		},		
+		{
 			height: 2725930,
 			fees: {
 				send: 1000000,		// 0.01
