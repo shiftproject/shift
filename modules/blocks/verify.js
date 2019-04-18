@@ -500,17 +500,16 @@ Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateS
 					return setImmediate(seriesCb);
 				}
 
-
 				// Fork: locked bytes in block does not match sum of all locked bytes
-				if (lockedBytes > 0 && lockedBytes !== block.lockedBytes) {
+				if (lockedBytes > 0 && lockedBytes != block.lockedBytes) {
 					modules.delegates.fork(block, 6);
-					return setImmediate(seriesCb, 'Unexpected locked bytes');
+					return setImmediate(seriesCb, 'Unexpected locked bytes:' + lockedBytes + ', ' + block.lockedBytes);
 				}
 
 				// Fork: cluster size in block does not match cluster size of stats
-				if (totalBytes > 0 && totalBytes !== block.clusterSize) {
+				if (totalBytes > 0 && totalBytes != block.clusterSize) {
 					modules.delegates.fork(block, 7);
-					return setImmediate(seriesCb, 'Unexpected cluster size');
+					return setImmediate(seriesCb, 'Unexpected cluster size:' + totalBytes + ', ' + block.clusterSize);
 				}
 
 				return setImmediate(seriesCb);

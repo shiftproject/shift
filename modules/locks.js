@@ -1,6 +1,7 @@
 'use strict';
 
 var async = require('async');
+var bignum = require('../helpers/bignum.js');
 var constants = require('../helpers/constants.js');
 var crypto = require('crypto');
 var sandboxHelper = require('../helpers/sandbox.js');
@@ -346,23 +347,27 @@ Locks.prototype.setClusterStats = function (cb) {
 			} else {
 				var stats = {
 					id: slotToSave,
-					locked_balance: results.lockedBalance,
-					locked_bytes: results.lockedBytes,
-					total_bytes: results.clusterStats.TotalStorage,
-					used_bytes: results.clusterStats.UsedStorage,
+					locked_balance: results.lockedBalance ? new bignum(results.lockedBalance).toNumber() : 0,
+					locked_bytes: results.lockedBytes ? new bignum(results.lockedBytes).toNumber() : 0,
+					total_bytes: results.clusterStats.TotalStorage ? new bignum(results.clusterStats.TotalStorage).toNumber() : 0,
+					used_bytes: results.clusterStats.UsedStorage ? new bignum(results.clusterStats.UsedStorage).toNumber() : 0,
 					timestamp: slots.getTime()
 				};
 
-				// Todo: Add input validation?
-
 				// Save stats
-				library.db.query(sql.setClusterStats, stats).then(function () {
-					__private.lastSlotSaved = lastRound + '.' + slotToSave;
-					library.logger.log('Saved stats to memtable' + ':' + JSON.stringify(stats));
-					return setImmediate(cb, null);
-				}).catch(function (err) {
-					library.logger.error(err.stack);
-					return setImmediate(cb, 'Locks#setClusterStats error');
+				library.schema.validate(stats, schema.setClusterStats, function (err) {
+					if (err) {
+						return setImmediate(cb, err[0].message);
+					}
+
+					library.db.query(sql.setClusterStats, stats).then(function () {
+						__private.lastSlotSaved = lastRound + '.' + slotToSave;
+						library.logger.log('Saved stats to memtable' + ':' + JSON.stringify(stats));
+						return setImmediate(cb, null);
+					}).catch(function (err) {
+						library.logger.error(err.stack);
+						return setImmediate(cb, 'Locks#setClusterStats error');
+					});
 				});
 			}
 		});
@@ -462,7 +467,7 @@ Locks.prototype.onBind = function (scope) {
 		});
 	}
 
-	jobsQueue.register('setClusterStats', setStats, constants.blockTime);	
+	jobsQueue.register('setClusterStats', setStats, constants.blockTime);
 };
 
 // Shared API
@@ -479,7 +484,7 @@ Locks.prototype.shared = {
 
 			var f = modules.system.getFees(req.body.height);
 			f.fee = {
-				lock: f.fees.lock, 
+				lock: f.fees.lock,
 				unlock: f.fees.unlock
 			};
 			delete f.fees;
@@ -511,7 +516,7 @@ Locks.prototype.shared = {
 			}
 
 			__private.lock.calcUnlockBytes({
-				senderPublicKey: req.body.publicKey, 
+				senderPublicKey: req.body.publicKey,
 				amount: req.body.amount
 			}, function(err, result) {
 				if (err) {
@@ -556,7 +561,7 @@ Locks.prototype.shared = {
 				if (err) {
 					return setImmediate(cb, err);
 				}
-				
+
 				return setImmediate(cb, null, { bytes: (bytes || 0) });
 			});
 		});

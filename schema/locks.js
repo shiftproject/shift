@@ -74,6 +74,38 @@ module.exports = {
 			}
 		}
 	},
+	setClusterStats: {
+		id: 'locks.setClusterStats',
+		type: 'object',
+		properties: {
+			id: {
+				type: 'integer',
+				minimum: 1
+			},
+			locked_balance: {
+				type: 'integer',
+				minimum: 0,
+			},
+			locked_bytes: {
+				type: 'integer',
+				minimum: 0,
+			},
+			total_bytes: {
+				type: 'integer',
+				minimum: 0,
+			},
+			used_bytes: {
+				type: 'integer',
+				minimum: 0,
+			},
+			timestamp: {
+				type: 'integer',
+				minimum: 0,
+				maximum: 8640000000000000
+			}
+		},
+		required: ['id', 'total_bytes', 'timestamp']
+	},
 	getBlockStats: {
 		id: 'locks.getBlockStats',
 		type: 'object',

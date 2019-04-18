@@ -225,12 +225,12 @@ Lock.prototype.calcLockBytes = function (height, amount, timestamp, cb) {
 			return setImmediate(cb, err);
 		}
 
-		totalLockedBytes = new bignum(totalLockedBytes).toNumber();
-		totalBytes = new bignum(totalBytes).toNumber();
+		totalLockedBytes = totalLockedBytes ? new bignum(totalLockedBytes).toNumber() : 0;
+		totalBytes = totalBytes ? new bignum(totalBytes).toNumber() : 0;
 
 		// Total minus used is available (10% buffer)
 		var freeBytes = (totalBytes - (totalBytes / buffer)) - totalLockedBytes;
-		if (freeBytes <= 0) {
+		if (freeBytes < 0) {
 			return setImmediate(cb, "No free bytes available");
 		}
 
@@ -240,7 +240,6 @@ Lock.prototype.calcLockBytes = function (height, amount, timestamp, cb) {
 		} else {
 			var lockBytes = Math.round(amount / (compensationFactor * ratioFactor));
 		}
-
 
 		var available = freeBytes - lockBytes;
 		if (available < 0) {
