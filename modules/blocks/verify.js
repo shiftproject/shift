@@ -494,26 +494,30 @@ Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateS
 			return setImmediate(seriesCb);
 		},
 		verifyClusterStats: function (seriesCb) {
-			modules.locks.getClusterStats(block.timestamp, false, function (err, lockedBytes, totalBytes) {
-				// Skip verifying if there are not enough recent stats available
-				if (err) {
+			if (block.version > 0) {
+				modules.locks.getClusterStats(block.timestamp, false, function (err, lockedBytes, totalBytes) {
+					// Skip verifying if there are not enough recent stats available
+					if (err) {
+						return setImmediate(seriesCb);
+					}
+
+					// Fork: locked bytes in block does not match sum of all locked bytes
+					if (lockedBytes > 0 && lockedBytes != block.lockedBytes) {
+						modules.delegates.fork(block, 6);
+						return setImmediate(seriesCb, 'Unexpected locked bytes:' + lockedBytes + ', ' + block.lockedBytes);
+					}
+
+					// Fork: cluster size in block does not match cluster size of stats
+					if (totalBytes > 0 && totalBytes != block.clusterSize) {
+						modules.delegates.fork(block, 7);
+						return setImmediate(seriesCb, 'Unexpected cluster size:' + totalBytes + ', ' + block.clusterSize);
+					}
+
 					return setImmediate(seriesCb);
-				}
-
-				// Fork: locked bytes in block does not match sum of all locked bytes
-				if (lockedBytes > 0 && lockedBytes != block.lockedBytes) {
-					modules.delegates.fork(block, 6);
-					return setImmediate(seriesCb, 'Unexpected locked bytes:' + lockedBytes + ', ' + block.lockedBytes);
-				}
-
-				// Fork: cluster size in block does not match cluster size of stats
-				if (totalBytes > 0 && totalBytes != block.clusterSize) {
-					modules.delegates.fork(block, 7);
-					return setImmediate(seriesCb, 'Unexpected cluster size:' + totalBytes + ', ' + block.clusterSize);
-				}
-
+				});				
+			} else {
 				return setImmediate(seriesCb);
-			});
+			}
 		},
 		checkExists: function (seriesCb) {
 			// Check if block id is already in the database (very low probability of hash collision)
