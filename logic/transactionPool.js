@@ -765,6 +765,7 @@ __private.processVerifyTransaction = function (transaction, broadcast, cb) {
 				var transactions = self.getUnconfirmedTransactionList(true, constants.maxTxsPerBlock);
 				async.eachSeries(transactions, function (trs, eachSeriesCb) {
 					if (transaction.senderId === trs.senderId &&
+						transaction.type === trs.type &&
 						transaction.asset.pin.hash === trs.asset.pin.hash) {
 							return setImmediate(eachSeriesCb, 'Pin transaction is already being processed');
 					} else {

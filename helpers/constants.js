@@ -61,7 +61,8 @@ module.exports = {
 		{ height: 370000, ver: '^6.3.0t'},
 		{ height: 640000, ver: '^6.5.0t'},
 		{ height: 1617500, ver: '^6.8.0t'},
-		{ height: 2725930, ver: '7.0.0t'}
+		{ height: 2700000, ver: '>=6.8.0'},
+		{ height: 2725930, ver: '^7.0.0t'}
 	],
 	activeDelegates: 101,
 	addressLength: 208,

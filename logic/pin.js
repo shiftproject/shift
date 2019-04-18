@@ -200,7 +200,7 @@ Pin.prototype.getBytes = function (trs) {
 
 			arrayBuf = Buffer.concat([arrayBuf, parentBuf]);
 		}
-		
+
 		buf = Buffer.concat([buf, arrayBuf]);
 	} catch (e) {
 		throw e;
