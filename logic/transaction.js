@@ -626,9 +626,9 @@ Transaction.prototype.verify = function (trs, sender, height, requester, checkEx
 	}
 
 	// Calculate fee
-	var fee = __private.types[trs.type].calculateFee.call(this, trs, sender, height) || false;
+	var fee = __private.types[trs.type].calculateFee.call(this, trs, sender, height);
 
-	if (!fee || trs.fee !== fee) {
+	if (typeof fee !== 'number' || trs.fee !== fee) {
 		return setImmediate(cb, 'Invalid transaction fee');
 	}
 
