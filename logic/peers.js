@@ -1,7 +1,6 @@
 'use strict';
 
 var _ = require('lodash');
-var async = require('async');
 var Peer = require('../logic/peer.js');
 var schema = require('../schema/peers.js');
 

@@ -16,7 +16,7 @@ module.exports = {
 			type: {
 				type: 'integer',
 				minimum: 0,
-				maximum: 10
+				maximum: 11
 			},
 			senderId: {
 				type: 'string',
@@ -186,6 +186,11 @@ module.exports = {
 		id: 'transactions.addTransactions',
 		type: 'object',
 		properties: {
+			type: {
+				type: 'integer',
+				minimum: 0,
+				maximum: 11
+			},			
 			secret: {
 				type: 'string',
 				minLength: 1,

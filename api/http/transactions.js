@@ -16,6 +16,12 @@ var httpApi = require('../../helpers/httpApi');
  *  - get	/multisignatures
  * 	- get	/unconfirmed/get
  * 	- get	/unconfirmed
+ * 	- get	/locks
+ * 	- get	/locks/get
+ * 	- get	/pins
+ * 	- get	/pins/get
+ * 	- get	/pins/getBytes
+ * 	- get	/pins/verify
  * 	- put	/
  * @memberof module:transactions
  * @requires helpers/Router
@@ -30,7 +36,7 @@ function TransactionsHttpApi (transactionsModule, app, logger, cache) {
 	var router = new Router();
 
 	// attach a middlware to endpoints
-	router.attachMiddlwareForUrls(httpApi.middleware.useCache.bind(null, logger, cache), [
+	router.attachMiddlewareForUrls(httpApi.middleware.useCache.bind(null, logger, cache), [
 		'get /'
 	]);
 

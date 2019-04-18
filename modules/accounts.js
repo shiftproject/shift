@@ -84,7 +84,13 @@ __private.openAccount = function (secret, cb) {
 				secondSignature: 0,
 				secondPublicKey: null,
 				multisignatures: null,
-				u_multisignatures: null
+				u_multisignatures: null,
+				locked_balance: null,
+				u_locked_balance: null,
+				locked_bytes: null,
+				u_locked_bytes: null,
+				pinned_bytes: null,
+				u_pinned_bytes: null
 			});
 		}
 	});
@@ -186,7 +192,7 @@ Accounts.prototype.setAccountAndGet = function (data, cb) {
  * @implements module:accounts#Account~merge
  * @param {Object} data - Contains address and public key.
  * @param {function} cb - Callback function.
- * @returns {setImmediateCallback} for errors wit address and public key.
+ * @returns {setImmediateCallback} for errors with address and public key.
  * @returns {function} calls to logic.account.merge().
  * @todo improve publicKey validation try/catch
  */
@@ -279,7 +285,13 @@ Accounts.prototype.shared = {
 						secondSignature: account.secondSignature,
 						secondPublicKey: account.secondPublicKey,
 						multisignatures: account.multisignatures,
-						u_multisignatures: account.u_multisignatures
+						u_multisignatures: account.u_multisignatures,
+						locked_balance: account.locked_balance,
+						u_locked_balance: account.u_locked_balance,
+						locked_bytes: account.locked_bytes,
+						u_locked_bytes: account.u_locked_bytes,
+						pinned_bytes: account.pinned_bytes,
+						u_pinned_bytes: account.u_pinned_bytes
 					};
 
 					return setImmediate(cb, null, {account: accountData});
@@ -552,7 +564,13 @@ Accounts.prototype.shared = {
 						secondSignature: account.secondSignature,
 						secondPublicKey: account.secondPublicKey,
 						multisignatures: account.multisignatures || [],
-						u_multisignatures: account.u_multisignatures || []
+						u_multisignatures: account.u_multisignatures || [],
+						locked_balance: account.locked_balance,
+						u_locked_balance: account.u_locked_balance,
+						locked_bytes: account.locked_bytes,
+						u_locked_bytes: account.u_locked_bytes,
+						pinned_bytes: account.pinned_bytes,
+						u_pinned_bytes: account.u_pinned_bytes
 					}
 				});
 			});

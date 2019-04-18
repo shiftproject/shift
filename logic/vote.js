@@ -109,7 +109,6 @@ Vote.prototype.verify = function (trs, sender, cb) {
 		if (err) {
 			return setImmediate(cb, err);
 		} else {
-
 			if (trs.asset.votes.length > _.uniqBy(trs.asset.votes, function (v) { return v.slice(1); }).length) {
 				return setImmediate(cb, 'Multiple votes for same delegate are not allowed');
 			}
@@ -313,7 +312,9 @@ Vote.prototype.undoUnconfirmed = function (trs, sender, cb) {
 
 	var votesInvert = Diff.reverse(trs.asset.votes);
 
-	this.scope.account.merge(sender.address, {u_delegates: votesInvert}, function (err) {
+	this.scope.account.merge(sender.address, {
+		u_delegates: votesInvert
+	}, function (err) {
 		return setImmediate(cb, err);
 	});
 };
@@ -363,8 +364,6 @@ Vote.prototype.objectNormalize = function (trs) {
  * @return {null|votes} votes object
  */
 Vote.prototype.dbRead = function (raw) {
-	// console.log(raw.v_votes);
-
 	if (!raw.v_votes) {
 		return null;
 	} else {

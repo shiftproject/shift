@@ -54,6 +54,9 @@ describe('GET /peer/blocks', function () {
 					node.expect(block).to.have.property('ot_outTransactionId');
 					node.expect(block).to.have.property('t_requesterPublicKey');
 					node.expect(block).to.have.property('t_signatures');
+					node.expect(block).to.have.property('l_bytes');
+					node.expect(block).to.have.property('p_hash');
+					node.expect(block).to.have.property('p_bytes');
 				});
 				done();
 			});

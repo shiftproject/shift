@@ -9,6 +9,7 @@ var OrderBy = require('../helpers/orderBy.js');
 var sandboxHelper = require('../helpers/sandbox.js');
 var schema = require('../schema/transactions.js');
 var sql = require('../sql/transactions.js');
+var lockSettings = require('../helpers/lockSettings.js');
 var TransactionPool = require('../logic/transactionPool.js');
 var transactionTypes = require('../helpers/transactionTypes.js');
 var Transfer = require('../logic/transfer.js');
@@ -228,29 +229,7 @@ __private.list = function (filter, cb) {
 };
 
 /**
- * Gets transaction by id from `trs_list` view.
- * @private
- * @param {string} id
- * @param {function} cb - Callback function.
- * @returns {setImmediateCallback} error | data: {transaction}
- */
-__private.getById = function (id, cb) {
-	library.db.query(sql.getById, {id: id}).then(function (rows) {
-		if (!rows.length) {
-			return setImmediate(cb, 'Transaction not found: ' + id);
-		}
-
-		var transacton = library.logic.transaction.dbRead(rows[0]);
-
-		return setImmediate(cb, null, transacton);
-	}).catch(function (err) {
-		library.logger.error(err.stack);
-		return setImmediate(cb, 'Transactions#getById error');
-	});
-};
-
-/**
- * Gets votes by transaction id from `votes` table.
+ * Gets votes asset by transaction id from `votes` table.
  * @private
  * @param {transaction} transaction
  * @param {function} cb - Callback function.
@@ -259,7 +238,7 @@ __private.getById = function (id, cb) {
 __private.getVotesById = function (transaction, cb) {
 	library.db.query(sql.getVotesById, {id: transaction.id}).then(function (rows) {
 		if (!rows.length) {
-			return setImmediate(cb, 'Transaction not found: ' + transaction.id);
+			return setImmediate(cb, 'Transaction not found');
 		}
 
 		var votes = rows[0].votes.split(',');
@@ -280,6 +259,50 @@ __private.getVotesById = function (transaction, cb) {
 	}).catch(function (err) {
 		library.logger.error(err.stack);
 		return setImmediate(cb, 'Transactions#getVotesById error');
+	});
+};
+
+/**
+ * Gets lock asset by transaction id from `locks` table.
+ * @private
+ * @param {transaction} transaction
+ * @param {function} cb - Callback function.
+ * @returns {setImmediateCallback} error | lock: {bytes, transactionId}
+ */
+__private.getLockById = function (transaction, cb) {
+	library.db.query(sql.getLocksById, {id: transaction.id}).then(function (locks) {
+		if (locks.length === 0) {
+			return setImmediate(cb, 'Lock transaction not found');
+		}
+
+		var lock = locks[0];
+
+		return setImmediate(cb, null, lock);
+	}).catch(function (err) {
+		library.logger.error(err.stack);
+		return setImmediate(cb, 'Transactions#getLockById error');
+	});
+};
+
+/**
+ * Gets pin asset by transaction id from `pins` table.
+ * @private
+ * @param {transaction} transaction
+ * @param {function} cb - Callback function.
+ * @returns {setImmediateCallback} error | pin: {hash, size, transactionId, parent}
+ */
+__private.getPinById = function (transaction, cb) {
+	library.db.query(sql.getPinsById, {id: transaction.id}).then(function (pins) {
+		if (pins.length === 0) {
+			return setImmediate(cb, 'Pin transaction not found');
+		}
+
+		var pin = pins[0];
+
+		return setImmediate(cb, null, pin);
+	}).catch(function (err) {
+		library.logger.error(err.stack);
+		return setImmediate(cb, 'Transactions#getPinById error');
 	});
 };
 
@@ -342,6 +365,26 @@ __private.getPooledTransactions = function (method, req, cb) {
 };
 
 // Public methods
+/**
+ * Gets transaction by id from `trs_list` view.
+ * @param {string} id
+ * @param {function} cb - Callback function.
+ * @returns {setImmediateCallback} error | data: {transaction}
+ */
+Transactions.prototype.getById = function (id, cb) {
+	library.db.query(sql.getById, {id: id}).then(function (rows) {
+		if (!rows.length) {
+			return setImmediate(cb, 'Transaction not found: ' + id);
+		}
+
+		var transaction = library.logic.transaction.dbRead(rows[0]);
+
+		return setImmediate(cb, null, transaction);
+	}).catch(function (err) {
+		library.logger.error(err.stack);
+		return setImmediate(cb, 'Transactions#getById error');
+	});
+};
 /**
  * Check if transaction is in pool
  * @param {string} id
@@ -592,6 +635,7 @@ Transactions.prototype.onBind = function (scope) {
 	modules = {
 		accounts: scope.accounts,
 		transactions: scope.transactions,
+		blocks: scope.blocks
 	};
 
 	__private.transactionPool.bind(
@@ -657,13 +701,27 @@ Transactions.prototype.shared = {
 				return setImmediate(cb, err[0].message);
 			}
 
-			__private.getById(req.body.id, function (err, transaction) {
+			self.getById(req.body.id, function (err, transaction) {
 				if (!transaction || err) {
 					return setImmediate(cb, 'Transaction not found');
 				}
 
 				if (transaction.type === transactionTypes.VOTE) {
 					__private.getVotesById(transaction, function (err, transaction) {
+						return setImmediate(cb, null, {transaction: transaction});
+					});
+				} else if (transaction.type === transactionTypes.LOCK || transaction.type === transactionTypes.UNLOCK) {
+					__private.getLockById(transaction, function (err, lock) {
+						if (!err && lock.bytes) {
+							transaction.asset.lock = { bytes: lock.bytes };
+						}	
+						return setImmediate(cb, null, {transaction: transaction});
+					});
+				} else if (transaction.type === transactionTypes.PIN || transaction.type === transactionTypes.UNPIN) {
+					__private.getPinById(transaction, function (err, pin) {
+						if (!err && pin.bytes) {
+							transaction.asset.pin = { hash: pin.hash, bytes: pin.bytes, parent: pin.parent };
+						}
 						return setImmediate(cb, null, {transaction: transaction});
 					});
 				} else {

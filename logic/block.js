@@ -26,7 +26,7 @@ function Block (ed, schema, transaction, cb) {
 	this.scope = {
 		ed: ed,
 		schema: schema,
-		transaction: transaction,
+		transaction: transaction
 	};
 	if (cb) {
 		return setImmediate(cb, null, this);
@@ -107,11 +107,16 @@ Block.prototype.create = function (data) {
 		payloadHash.update(bytes);
 	}
 
+	var version = typeof data.version !== 'undefined' && 
+		Number.isInteger(data.version) ? data.version : 0;
+
 	var block = {
-		version: 0,
+		version: version,
 		totalAmount: totalAmount,
 		totalFee: totalFee,
 		reward: reward,
+		lockedBytes: version == 0 ? null : (data.lockedBytes ? parseInt(data.lockedBytes) : 0),
+		clusterSize: version == 0 ? null : (data.clusterSize ? parseInt(data.clusterSize) : 0),
 		payloadHash: payloadHash.digest().toString('hex'),
 		timestamp: data.timestamp,
 		numberOfTransactions: blockTransactions.length,
@@ -178,6 +183,11 @@ Block.prototype.getBytes = function (block) {
 		bb.writeLong(block.totalAmount);
 		bb.writeLong(block.totalFee);
 		bb.writeLong(block.reward);
+
+		if (block.version > 0) {
+			bb.writeLong(block.lockedBytes);
+			bb.writeLong(block.clusterSize);
+		}
 
 		bb.writeInt(block.payloadLength);
 
@@ -250,6 +260,8 @@ Block.prototype.dbFields = [
 	'totalAmount',
 	'totalFee',
 	'reward',
+	'lockedBytes',
+	'clusterSize',
 	'payloadLength',
 	'payloadHash',
 	'generatorPublicKey',
@@ -273,7 +285,7 @@ Block.prototype.dbSave = function (block) {
 		throw e;
 	}
 
-	return {
+	var db = {
 		table: this.dbTable,
 		fields: this.dbFields,
 		values: {
@@ -286,12 +298,16 @@ Block.prototype.dbSave = function (block) {
 			totalAmount: block.totalAmount,
 			totalFee: block.totalFee,
 			reward: block.reward || 0,
+			lockedBytes: block.version == 0 ? null : (block.lockedBytes ? parseInt(block.lockedBytes) : 0),
+			clusterSize: block.version == 0 ? null : (block.clusterSize ? parseInt(block.clusterSize) : 0),
 			payloadLength: block.payloadLength,
 			payloadHash: payloadHash,
 			generatorPublicKey: generatorPublicKey,
 			blockSignature: blockSignature
 		}
 	};
+
+	return db;
 };
 
 /**
@@ -363,6 +379,14 @@ Block.prototype.schema = {
 			type: 'integer',
 			minimum: 0
 		},
+		lockedBytes: {
+			type: 'integer',
+			minimum: 0
+		},
+		clusterSize: {
+			type: 'integer',
+			minimum: 0
+		},
 		transactions: {
 			type: 'array',
 			uniqueItems: true
@@ -388,6 +412,15 @@ Block.prototype.objectNormalize = function (block) {
 	for (i in block) {
 		if (block[i] == null || typeof block[i] === 'undefined') {
 			delete block[i];
+		}
+	}
+
+	if (block.version > 0) {
+		if (!Block.prototype.schema.required.hasOwnProperty('lockedBytes')) {
+			Block.prototype.schema.required.push('lockedBytes');
+		}
+		if (!Block.prototype.schema.required.hasOwnProperty('clusterSize')) {
+			Block.prototype.schema.required.push('clusterSize');
 		}
 	}
 
@@ -460,6 +493,8 @@ Block.prototype.dbRead = function (raw) {
 			totalAmount: parseInt(raw.b_totalAmount),
 			totalFee: parseInt(raw.b_totalFee),
 			reward: parseInt(raw.b_reward),
+			lockedBytes: raw.b_version === 0 ? null : (raw.b_lockedBytes ? parseInt(raw.b_lockedBytes) : 0),
+			clusterSize: raw.b_version === 0 ? null : (raw.b_clusterSize ? parseInt(raw.b_clusterSize) : 0),
 			payloadLength: parseInt(raw.b_payloadLength),
 			payloadHash: raw.b_payloadHash,
 			generatorPublicKey: raw.b_generatorPublicKey,
@@ -467,7 +502,9 @@ Block.prototype.dbRead = function (raw) {
 			blockSignature: raw.b_blockSignature,
 			confirmations: parseInt(raw.b_confirmations)
 		};
-		block.totalForged = new bignum(block.totalFee).plus(new bignum(block.reward)).toString();
+
+		block.totalForged = new bignum(block.totalFee.toString()).plus(new bignum(block.reward.toString())).toNumber();
+
 		return block;
 	}
 };

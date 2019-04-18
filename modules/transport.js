@@ -576,7 +576,7 @@ Transport.prototype.internal = {
 	blocks: function (query, cb) {
 		// Get 34 blocks with all data (joins) from provided block id
 		// According to maxium payload of 58150 bytes per block with every transaction being a vote
-		// Discounting maxium compression setting used in middleware
+		// Discounting maximum compression setting used in middleware
 		// Maximum transport payload = 2000000 bytes
 		modules.blocks.utils.loadBlocksData({
 			limit: 34, // 1977100 bytes

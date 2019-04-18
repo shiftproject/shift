@@ -184,6 +184,74 @@ function Account (db, schema, logger, cb) {
 			expression: '("u_balance")::bigint'
 		},
 		{
+			name: 'locked_balance',
+			type: 'BigInt',
+			filter: {
+				required: true,
+				type: 'integer',
+				minimum: 0,
+				maximum: constants.totalAmount
+			},
+			conv: Number,
+			expression: '("locked_balance")::bigint'
+	 	},
+		{
+			name: 'u_locked_balance',
+			type: 'BigInt',
+			filter: {
+				required: true,
+				type: 'integer',
+				minimum: 0,
+				maximum: constants.totalAMount
+			},
+			conv: Number,
+			expression: '("u_locked_balance")::bigint'
+		},
+		{
+			name: 'locked_bytes',
+			type: 'BigInt',
+			filter: {
+				required: true,
+				type: 'integer',
+				minimum: 0
+			},
+			conv: Number,
+			expression: '("locked_bytes")::bigint'
+	 	},
+		{
+			name: 'u_locked_bytes',
+			type: 'BigInt',
+			filter: {
+				required: true,
+				type: 'integer',
+				minimum: 0
+			},
+			conv: Number,
+			expression: '("u_locked_bytes")::bigint'
+		},
+		{
+			name: 'pinned_bytes',
+			type: 'BigInt',
+			filter: {
+				required: true,
+				type: 'integer',
+				minimum: 0
+			},
+			conv: Number,
+			expression: '("pinned_bytes")::bigint'
+	 	},
+		{
+			name: 'u_pinned_bytes',
+			type: 'BigInt',
+			filter: {
+				required: true,
+				type: 'integer',
+				minimum: 0
+			},
+			conv: Number,
+			expression: '("u_pinned_bytes")::bigint'
+		},		
+		{
 			name: 'vote',
 			type: 'BigInt',
 			filter: {
@@ -355,7 +423,7 @@ function Account (db, schema, logger, cb) {
 			immutable: true
 		}
 	];
-	
+
 	// Obtains fields from model
 	this.fields = this.model.map(function (field) {
 		var _tmp = {};
@@ -374,15 +442,15 @@ function Account (db, schema, logger, cb) {
 
 		return _tmp;
 	});
-	
-	// Obtains bynary fields from model
+
+	// Obtains binary fields from model
 	this.binary = [];
 	this.model.forEach(function (field) {
 		if (field.type === 'Binary') {
 			this.binary.push(field.name);
 		}
 	}.bind(this));
-	
+
 	// Obtains filters from model
 	this.filter = {};
 	this.model.forEach(function (field) {

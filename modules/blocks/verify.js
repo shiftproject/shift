@@ -20,7 +20,7 @@ function Verify (logger, block, transaction, db) {
 		db: db,
 		logic: {
 			block: block,
-			transaction: transaction,
+			transaction: transaction
 		},
 	};
 	self = this;
@@ -176,7 +176,9 @@ __private.verifyAgainstLastNBlockIds = function (block, result) {
  * @return {Array}   result.errors Array of validation errors
  */
 __private.verifyVersion = function (block, result) {
-	if (block.version > 0) {
+	var version = modules.system.getBlockVersion(block.height);
+
+	if (block.version !== version) {
 		result.errors.push('Invalid block version');
 	}
 
@@ -373,7 +375,7 @@ __private.verifyBlockSlotWindow = function (block, result) {
  * @return {Array}   result.errors Array of validation errors
  */
 Verify.prototype.verifyReceipt = function (block) {
-	var lastBlock = modules.blocks.lastBlock.get();
+//	var lastBlock = modules.blocks.lastBlock.get();
 
 //	block = __private.setHeight(block, lastBlock);
 
@@ -462,7 +464,7 @@ Verify.prototype.verifyBlock = function (block) {
  */
 Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateSlot, cb) {
 	if (modules.blocks.isCleaning.get()) {
-		// Break processing if node shutdown reqested
+		// Break processing if node shutdown requested
 		return setImmediate(cb, 'Cleaning up');
 	} else if (!__private.loaded) {
 		// Break processing if blockchain is not loaded
@@ -490,6 +492,28 @@ Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateS
 			}
 
 			return setImmediate(seriesCb);
+		},
+		verifyClusterStats: function (seriesCb) {
+			modules.locks.getClusterStats(block.timestamp, false, function (err, lockedBytes, totalBytes) {
+				// Skip verifying if there are not enough recent stats available
+				if (err) {
+					return setImmediate(seriesCb);
+				}
+
+				// Fork: locked bytes in block does not match sum of all locked bytes
+				if (lockedBytes > 0 && lockedBytes != block.lockedBytes) {
+					modules.delegates.fork(block, 6);
+					return setImmediate(seriesCb, 'Unexpected locked bytes:' + lockedBytes + ', ' + block.lockedBytes);
+				}
+
+				// Fork: cluster size in block does not match cluster size of stats
+				if (totalBytes > 0 && totalBytes != block.clusterSize) {
+					modules.delegates.fork(block, 7);
+					return setImmediate(seriesCb, 'Unexpected cluster size:' + totalBytes + ', ' + block.clusterSize);
+				}
+
+				return setImmediate(seriesCb);
+			});
 		},
 		checkExists: function (seriesCb) {
 			// Check if block id is already in the database (very low probability of hash collision)
@@ -541,7 +565,7 @@ Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateS
 		} else {
 			// The block and the transactions are OK i.e:
 			// * Block and transactions have valid values (signatures, block slots, etc...)
-			// * The check against database state passed (for instance sender has enough LSK, votes are under 101, etc...)
+			// * The check against database state passed (for instance sender has enough SHIFT, votes are under 101, etc...)
 			// We thus update the database with the transactions values, save the block and tick it
 			modules.blocks.chain.applyBlock(block, broadcast, saveBlock, cb);
 		}
@@ -560,11 +584,12 @@ Verify.prototype.onBind = function (scope) {
 	library.logger.trace('Blocks->Verify: Shared modules bind.');
 	modules = {
 		accounts: scope.accounts,
+		system: scope.system,
 		blocks: scope.blocks,
 		delegates: scope.delegates,
 		transactions: scope.transactions,
+		locks: scope.locks
 	};
-
 
 	// Set module as loaded
 	__private.loaded = true;

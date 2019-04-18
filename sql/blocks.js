@@ -9,6 +9,8 @@ var BlocksSql = {
     'totalAmount',
     'totalFee',
     'reward',
+    'lockedBytes',
+    'clusterSize',
     'numberOfTransactions',
     'generatorPublicKey'
   ],

@@ -317,22 +317,40 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 		});
 	}, function () {
 		var block;
+		var last = modules.blocks.lastBlock.get();
+		var version = modules.system.getBlockVersion(last.height+1);		
+		var createBlock = function (lockedBytes, clusterSize, cb) {
+			try {
+				// Create a block
+				block = library.logic.block.create({
+					keypair: keypair,
+					timestamp: timestamp,
+					previousBlock: last,
+					transactions: ready,
+					version: version,
+					lockedBytes: lockedBytes,
+					clusterSize: clusterSize
+				});
+			} catch (e) {
+				library.logger.error(e.stack);
+				return setImmediate(cb, e);
+			}
 
-		try {
-			// Create a block
-			block = library.logic.block.create({
-				keypair: keypair,
-				timestamp: timestamp,
-				previousBlock: modules.blocks.lastBlock.get(),
-				transactions: ready
-			});
-		} catch (e) {
-			library.logger.error(e.stack);
-			return setImmediate(cb, e);
+			// Start block processing - broadcast: true, saveBlock: true, validateSlot: true
+			modules.blocks.verify.processBlock(block, true, true, true, cb);
 		}
 
-		// Start block processing - broadcast: true, saveBlock: true, validateSlot: true
-		modules.blocks.verify.processBlock(block, true, true, true, cb);
+		if (version > 0) {
+			modules.locks.getClusterStats(null, false, function (err, lockedBytes, clusterSize) {
+				if (err) {
+					return setImmediate(cb, 'Unable to forge because of incomplete cluster stats');
+				}
+
+				createBlock(lockedBytes, clusterSize, cb);
+			});
+		} else {
+			createBlock(null, null, cb);
+		}
 	});
 };
 
@@ -571,6 +589,7 @@ __private.receiveForkFive = function (block, lastBlock, cb) {
 /**
  * Handle modules initialization
  * - accounts
+ * - system
  * - blocks
  * - delegates
  * - loader
@@ -583,12 +602,14 @@ Process.prototype.onBind = function (scope) {
 	library.logger.trace('Blocks->Process: Shared modules bind.');
 	modules = {
 		accounts: scope.accounts,
+		system: scope.system,
 		blocks: scope.blocks,
 		delegates: scope.delegates,
 		loader: scope.loader,
 		rounds: scope.rounds,
 		transactions: scope.transactions,
 		transport: scope.transport,
+		locks: scope.locks
 	};
 
 	// Set module as loaded

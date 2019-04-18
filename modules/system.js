@@ -135,9 +135,10 @@ System.prototype.getMinVersion = function (height) {
 	height = height || modules.blocks.lastBlock.get().height;
 
 	var minVer = '';
-	for ( var i = constants.minVersion.length - 1; i >= 0 && minVer == ''; --i ) {
-		if (height>=constants.minVersion[i].height)
-			{minVer = constants.minVersion[i].ver;}
+	for (var i = constants.minVersion.length - 1; i >= 0 && minVer == ''; --i) {
+		if (height >= constants.minVersion[i].height) {
+			minVer = constants.minVersion[i].ver;
+		}
 	}
 
 	// update this.minVersion / this.minVersionChar, if necessary
@@ -153,6 +154,23 @@ System.prototype.getMinVersion = function (height) {
 	}
 
 	return minVer;
+};
+
+/**
+ * Gets private variable `blockVersion`
+ * @return {string}
+ */
+System.prototype.getBlockVersion = function (height) {
+	height = height || modules.blocks.lastBlock.get().height;
+
+	var blockVer = 0;
+	for (var i = constants.blockVersion.length - 1; i >= 0 && blockVer == 0; --i) {
+		if (height >= constants.blockVersion[i].height) {
+			blockVer = constants.blockVersion[i].ver;
+		}
+	}
+
+	return blockVer;
 };
 
 /**
@@ -175,10 +193,9 @@ System.prototype.versionCompatible = function (version) {
 	var rangeRegExp = /[\^~\*]/;
 	if (this.minVersionChar && versionChar && !rangeRegExp.test(this.minVersion)) {
 		return (version + versionChar) === (this.minVersion + this.minVersionChar);
+	} else {
+		return semver.satisfies(version, this.minVersion);
 	}
-
-	// ignore versionChar, check only version
-	return semver.satisfies(version, this.minVersion);
 };
 
 /**
