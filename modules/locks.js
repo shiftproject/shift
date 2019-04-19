@@ -289,6 +289,11 @@ Locks.prototype.setClusterStats = function (cb) {
 				});
 			},
 			clusterStats: function (seriesCb) {
+				// Reset to bootstrap peers
+				if (__private.storagePeers.length === 0) {
+					__private.storagePeers = library.config.storage.peers;
+				}
+
 				// Storage cluster
 				var peer = __private.storagePeers[Math.floor(Math.random() * __private.storagePeers.length)];
 				if (peer === undefined || peer.length === 0) {
@@ -319,7 +324,9 @@ Locks.prototype.setClusterStats = function (cb) {
 								try {
 									var rows = JSON.parse(result.body);
 									for (var i = 0, row; row = rows[i]; i++) {
-										__private.addPeer(row.Host, row.Port);
+										if (row.Online === true) {
+											__private.addPeer(row.Host, row.Port);
+										}
 									}
 								} catch(err) {}
 							}
@@ -376,8 +383,8 @@ Locks.prototype.setClusterStats = function (cb) {
 
 // Private methods
 __private.addPeer = function(ip, port) {
+	var exists = false;
 	if (__private.storagePeers.length > 0) {
-		var exists = false;
 		for (var i = 0; i < __private.storagePeers.length; i++) {
 			var peer = __private.storagePeers[i];
 			if (peer.hasOwnProperty('ip') && peer.ip === ip) {
@@ -385,10 +392,11 @@ __private.addPeer = function(ip, port) {
 				break;
 			}
 		}
-		if (!exists) {
-			library.logger.info('Add new storage peer to list', ip);
-			__private.storagePeers.push({'ip': ip});
-		}
+	}
+
+	if (!exists) {
+		library.logger.info('Add new storage peer to list', ip);
+		__private.storagePeers.push({'ip': ip});
 	}
 }
 
@@ -405,11 +413,6 @@ __private.removePeer = function(ip) {
 		if (remove !== false) {
 			library.logger.info('Remove bad storage peer from list', ip);
 			__private.storagePeers.splice(remove, 1);
-		}
-
-		// Reset to bootstrap peers
-		if (__private.storagePeers.length === 0){
-			__private.storagePeers = library.config.storage.peers;
 		}
 	}
 }
