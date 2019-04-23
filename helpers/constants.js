@@ -55,14 +55,14 @@
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
  */
 module.exports = {
-	currentVersion: '6.9.0t',
+	currentVersion: '6.9.1t',
 	minVersion: [
 		{ height: 1,      ver: '^6.0.1t'},
 		{ height: 370000, ver: '^6.3.0t'},
 		{ height: 640000, ver: '^6.5.0t'},
 		{ height: 1617500, ver: '^6.8.0t'},
 		{ height: 2700000, ver: '>=6.8.0'},
-		{ height: 2725930, ver: '^7.0.0t'}
+		{ height: 2725930, ver: '>6.9.0'}
 	],
 	activeDelegates: 101,
 	addressLength: 208,
@@ -72,8 +72,7 @@ module.exports = {
 	blockTime: 27000,
 	blockReceiptTimeOut: 27 * 2, // 2 blocks
 	blockVersion: [
-		{ height: 1, ver: 0},
-		{ height: 2725930, ver: 1}
+		{ height: 1, ver: 0}
 	],
 	confirmationLength: 77,
 	epochTime: new Date(Date.UTC(2016, 4, 24, 17, 0, 0, 0)),

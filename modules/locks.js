@@ -266,6 +266,48 @@ Locks.prototype.setClusterStats = function (cb) {
 
 	library.logger.trace('Modules/Locks->setClusterStats', {interval: constants.blockStatsInterval, slot: slotNumber});
 
+	// No storage peers found. Reset to bootstrap peers
+	if (__private.storagePeers.length === 0) {
+		__private.storagePeers = library.config.storage.peers;
+	}
+
+	// Call a random peer from storage cluster
+	var peer = __private.storagePeers[Math.floor(Math.random() * __private.storagePeers.length)];
+	if (peer === undefined || peer.length === 0) {
+		return setImmediate(cb, 'Not a valid storage peer');
+	}
+
+	var url = 'http://' + peer.ip + (peer.port && peer.port != 80 ? ':' + peer.port : '');
+	var req = {
+		url: url + '/peers',
+		method: 'get',
+		timeout: library.config.storage.options.timeout
+	};
+
+	// Populate peer list, every [3] times we come here
+	var lookupPerIterations = 3;
+	var randomNum = Math.ceil(Math.random() * lookupPerIterations);
+	if (randomNum === lookupPerIterations) {
+		popsicle.request(req).then(function (result) {
+			if (result.status === 200) {
+				try {
+					var rows = JSON.parse(result.body);
+					for (var i = 0, row; row = rows[i]; i++) {
+						if (row.Online === true) {
+							__private.addPeer(row.Host, row.Port);
+						}
+					}
+				} catch(err) {}
+			}
+		}).catch(function (err) {
+			if (peer !== undefined) {
+				__private.removePeer(peer.ip);
+				peer = __private.storagePeers[Math.floor(Math.random() * __private.storagePeers.length)];
+			}
+		});
+	}
+
+	// Write stats, one time in a range of [10] blocks
 	if (!slotToSave || __private.lastSlotSaved == lastRound + '.' + slotToSave) {
 		return cb();
 	} else {
@@ -289,48 +331,12 @@ Locks.prototype.setClusterStats = function (cb) {
 				});
 			},
 			clusterStats: function (seriesCb) {
-				// Reset to bootstrap peers
-				if (__private.storagePeers.length === 0) {
-					__private.storagePeers = library.config.storage.peers;
-				}
-
-				// Storage cluster
-				var peer = __private.storagePeers[Math.floor(Math.random() * __private.storagePeers.length)];
-				if (peer === undefined || peer.length === 0) {
-					return setImmediate(seriesCb, 'No storage peers found');
-				}
-
-				var url = '/stats';
-				var req = {
-					url: 'http://' + peer.ip + (peer.port && peer.port != 80 ? ':' + peer.port : '') + url,
-					method: 'get',
-					timeout: library.config.storage.options.timeout
-				};
-
+				req.url = url + '/stats',
 				popsicle.request(req).then(function (res) {
 					if (res.status !== 200) {
 						__private.removePeer(peer.ip);
 
 						return setImmediate(seriesCb, ['Received bad response from cluster', res.status, req.method, req.url].join(' '));
-					}
-
-					// Populate peer list, every X times we come here
-					var lookupPerIterations = 3;
-					var randomNum = Math.ceil(Math.random() * lookupPerIterations);
-					if (randomNum === lookupPerIterations) {
-						req.url = req.url.replace(new RegExp(url), "/peers");
-						popsicle.request(req).then(function (result) {
-							if (result.status === 200) {
-								try {
-									var rows = JSON.parse(result.body);
-									for (var i = 0, row; row = rows[i]; i++) {
-										if (row.Online === true) {
-											__private.addPeer(row.Host, row.Port);
-										}
-									}
-								} catch(err) {}
-							}
-						});
 					}
 
 					// Parse stats result
