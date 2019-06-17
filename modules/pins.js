@@ -35,7 +35,6 @@ function Pins (cb, scope) {
 		ed: scope.ed,
 		balancesSequence: scope.balancesSequence,
 		logic: {
-			pin: scope.logic.pin,
 			transaction: scope.logic.transaction
 		},
 		config: {
@@ -81,6 +80,7 @@ __private.getPinsByParent = function (id, type, cb) {
 		var result = [];
 		pins.forEach(function(pin) {
 			if ((!type || pin.latest === type) && (pin.latest === transactionTypes.PIN || pin.latest === transactionTypes.UNPIN)) {
+				pin.hash = __private.pin.cid(pin.hash, 0); // Show as cidv0
 				result.push(pin);
 			}
 		});
@@ -127,12 +127,14 @@ Pins.prototype.getPinnedBytes = function (publicKey, cb) {
  * @returns {setImmediateCallback} error | data: {pin}
  */
 Pins.prototype.getMostRecentPin = function (hash, senderId, cb) {
+	hash = __private.pin.cid(hash, 1); // Query as cidv1
 	library.db.query(sql.getMostRecentPin, {hash: hash, senderId: senderId}).then(function (pins) {
 		if (pins.length === 0) {
 			return setImmediate(cb, 'Pin transaction not found: ' + hash + ' with sender ' + senderId);
 		}
 
 		var pin = pins[0];
+		pin.hash = __private.pin.cid(pin.hash, 0); // Show as cidv0
 
 		return setImmediate(cb, null, pin);
 	}).catch(function (err) {
@@ -198,7 +200,7 @@ Pins.prototype.shared = {
 
 			var f = modules.system.getFees(req.body.height);
 			f.fee = {
-				pin: f.fees.pin, 
+				pin: f.fees.pin,
 				unpin: f.fees.unpin
 			};
 			delete f.fees;
@@ -210,6 +212,7 @@ Pins.prototype.shared = {
 			if (err) {
 				return setImmediate(cb, err[0].message);
 			}
+
 			self.getMostRecentPin(req.body.hash, req.body.senderId, function (err, transaction) {
 				if (!transaction || err) {
 					return setImmediate(cb, err);

@@ -101,7 +101,7 @@ Lock.prototype.verify = function (trs, sender, cb) {
 
 	var availableBalance = new bignum(sender.balance.toString());
 	if (trs.type == transactionTypes.LOCK) {
-		var totalAmount = new bignum(trs.amount).plus(trs.fee);
+		var totalAmount = new bignum(trs.amount.toString()).plus(trs.fee);
 		if (availableBalance.lessThan(totalAmount)) {
 			var err = [
 				'Account does not have enough SHIFT to perform this lock request:', sender.address,
@@ -121,7 +121,7 @@ Lock.prototype.verify = function (trs, sender, cb) {
 			var lockBytes = Math.round(result);
 
 			if (lockBytes < trs.asset.lock.bytes) {
-				return setImmediate(cb, 'Bytes to lock (' +trs.asset.lock.bytes+ ') cannot exceed calculated bytes (' +lockBytes+ ')');			
+				return setImmediate(cb, 'Bytes to lock (' +trs.asset.lock.bytes+ ') cannot exceed calculated bytes (' +lockBytes+ ')');
 			}
 
 			return setImmediate(cb, err, trs);
@@ -207,7 +207,7 @@ Lock.prototype.getBytes = function (trs) {
 /**
  * Calculates how many bytes to lock for the offered amount of coins
  * @param {blockHeight} height
- * @param {number} amount 
+ * @param {number} amount
  * @param {function} cb
  * @return {setImmediateCallback} error | cb
  */
@@ -225,8 +225,8 @@ Lock.prototype.calcLockBytes = function (height, amount, timestamp, cb) {
 			return setImmediate(cb, err);
 		}
 
-		totalLockedBytes = totalLockedBytes ? new bignum(totalLockedBytes).toNumber() : 0;
-		totalBytes = totalBytes ? new bignum(totalBytes).toNumber() : 0;
+		totalLockedBytes = totalLockedBytes ? new bignum(totalLockedBytes.toString()).toNumber() : 0;
+		totalBytes = totalBytes ? new bignum(totalBytes.toString()).toNumber() : 0;
 
 		// Total minus used is available (10% buffer)
 		var freeBytes = (totalBytes - (totalBytes / buffer)) - totalLockedBytes;

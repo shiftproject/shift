@@ -232,7 +232,7 @@ Process.prototype.loadBlocksFromPeer = function (peer, cb) {
 
 	// Process all received blocks
 	function processBlocks (blocks, seriesCb) {
-		// Skip if ther is no blocks
+		// Skip if there are no blocks
 		if (blocks.length === 0) {
 			return setImmediate(seriesCb);
 		}
@@ -318,7 +318,7 @@ Process.prototype.generateBlock = function (keypair, timestamp, cb) {
 	}, function () {
 		var block;
 		var last = modules.blocks.lastBlock.get();
-		var version = modules.system.getBlockVersion(last.height+1);		
+		var version = modules.system.getBlockVersion(last.height + 1);
 		var createBlock = function (lockedBytes, clusterSize, cb) {
 			try {
 				// Create a block

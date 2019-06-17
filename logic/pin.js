@@ -3,6 +3,7 @@
 var transactionTypes = require('../helpers/transactionTypes.js');
 var bignum = require('../helpers/bignum.js');
 var ByteBuffer = require('bytebuffer');
+var CID = require('cids');
 
 // Private fields
 var modules, library, self, __private = {};
@@ -48,8 +49,10 @@ Pin.prototype.create = function (data, trs) {
 	trs.recipientId = null;
 	trs.amount = 0;
 
+	var hash = self.cid(data.hash, 0);
+
 	trs.asset.pin = {
-		hash: data.hash,
+		hash: hash,
 		bytes: data.bytes,
 		parent: data.parent
 	};
@@ -351,7 +354,7 @@ Pin.prototype.schema = {
 		hash: {
 			type: 'string',
 			minLength: 46,
-			maxLength: 46
+			maxLength: 60
 		},
 		bytes: {
 			type: 'integer',
@@ -359,7 +362,7 @@ Pin.prototype.schema = {
 			maximum: Number.MAX_SAFE_INTEGER
 		},
 		parent: {
-			type: ['string', 'null'],
+			type: 'string',
 			format: 'id',
 			minLength: 1,
 			maxLength: 20
@@ -387,6 +390,21 @@ Pin.prototype.objectNormalize = function (trs) {
 	return trs;
 };
 
+Pin.prototype.cid = function (multihashStr, version = 1) {
+	var cidv0, cidv1;
+	var cid = new CID(multihashStr);
+
+	if (cid.version === 1) { // multibaseName: base58btc
+		cidv0 = (version === 0 ? cid.toV0() : cid).toBaseEncodedString();
+		cidv1 = multihashStr;
+	} else if (cid.version === 0) { // multibaseName: base32
+		cidv0 = multihashStr;
+		cidv1 = (version === 1 ? cid.toV1() : cid).toBaseEncodedString();
+	}
+
+	return version === 1 ? cidv1 : cidv0;
+}
+
 /**
  * @param {Object} raw
  * @return {null}
@@ -395,11 +413,14 @@ Pin.prototype.dbRead = function (raw) {
 	if (!raw.p_hash || !raw.p_bytes) {
 		return null;
 	} else {
+		var hash = self.cid(raw.p_hash, 0); // Show as cidv0
 		var data = {
-			hash: raw.p_hash,
-			bytes: Math.round(raw.p_bytes),
-			parent: raw.p_parent
+			hash: hash,
+			bytes: Math.round(raw.p_bytes)
 		};
+		if (raw.p_parent) {
+			data.parent = raw.p_parent;
+		}
 
 		return {pin: data};
 	}
@@ -419,11 +440,13 @@ Pin.prototype.dbFields = [
  * @return {null}
  */
 Pin.prototype.dbSave = function (trs) {
+	var hash = self.cid(trs.asset.pin.hash, 1); // Save as cidv1
+
 	return {
 		table: this.dbTable,
 		fields: this.dbFields,
 		values: {
-			hash: trs.asset.pin.hash,
+			hash: hash,
 			bytes: trs.asset.pin.bytes,
 			parent: trs.asset.pin.parent,
 			transactionId: trs.id

@@ -18,7 +18,7 @@ module.exports = {
 			hash: {
 				type: 'string',
 				minLength: 46,
-				maxLength: 46
+				maxLength: 60
 			},
 			bytes: {
 				type: 'integer',

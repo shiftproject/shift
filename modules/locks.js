@@ -18,6 +18,7 @@ var jobsQueue = require('../helpers/jobsQueue.js');
 var modules, library, self, __private = {}, shared = {};
 
 __private.storagePeers = {};
+__private.totalBytes = [];
 __private.assetTypes = {};
 __private.lastSlotSaved = null;
 
@@ -273,7 +274,7 @@ Locks.prototype.setClusterStats = function (cb) {
 
 	// Call a random peer from storage cluster
 	var peer = __private.storagePeers[Math.floor(Math.random() * __private.storagePeers.length)];
-	if (peer === undefined || peer.length === 0) {
+	if (peer === undefined || __private.storagePeers.length === 0) {
 		return setImmediate(cb, 'Not a valid storage peer');
 	}
 
@@ -307,65 +308,69 @@ Locks.prototype.setClusterStats = function (cb) {
 		});
 	}
 
-	// Write stats, one time in a range of [10] blocks
-	if (!slotToSave || __private.lastSlotSaved == lastRound + '.' + slotToSave) {
-		return cb();
-	} else {
-		async.series({
-			lockedBalance: function (seriesCb) {
-				self.getTotalLockedBalance(function (err, balance) {
-					if (err) {
-						return setImmediate(seriesCb, err);
-					} else {
-						return setImmediate(seriesCb, null, balance);
-					}
-				});
-			},
-			lockedBytes: function (seriesCb) {
-				self.getTotalLockedBytes(function (err, bytes) {
-					if (err) {
-						return setImmediate(seriesCb, err);
-					} else {
-						return setImmediate(seriesCb, null, bytes);
-					}
-				});
-			},
-			clusterStats: function (seriesCb) {
-				req.url = url + '/stats',
-				popsicle.request(req).then(function (res) {
-					if (res.status !== 200) {
-						__private.removePeer(peer.ip);
+	async.series({
+		lockedBalance: function (seriesCb) {
+			self.getTotalLockedBalance(function (err, balance) {
+				if (err) {
+					return setImmediate(seriesCb, err);
+				} else {
+					return setImmediate(seriesCb, null, balance);
+				}
+			});
+		},
+		lockedBytes: function (seriesCb) {
+			self.getTotalLockedBytes(function (err, bytes) {
+				if (err) {
+					return setImmediate(seriesCb, err);
+				} else {
+					return setImmediate(seriesCb, null, bytes);
+				}
+			});
+		},
+		clusterStats: function (seriesCb) {
+			req.url = url + '/stats',
+			popsicle.request(req).then(function (res) {
+				if (res.status !== 200) {
+					__private.removePeer(peer.ip);
 
-						return setImmediate(seriesCb, ['Received bad response from cluster', res.status, req.method, req.url].join(' '));
-					}
+					return setImmediate(seriesCb, ['Received bad response from cluster', res.status, req.method, req.url].join(' '));
+				}
 
-					// Parse stats result
-					try {
-						var cluster = JSON.parse(res.body);
-						return setImmediate(seriesCb, null, cluster);
-					} catch(err) {
-						return setImmediate(seriesCb, 'Error parsing cluster response');
-					};
-				}).catch(function (err) {
-					if (peer !== undefined) {
-						__private.removePeer(peer.ip);
-					}
-
-					return setImmediate(seriesCb, [err.code, 'Request failed', req.method, req.url].join(' '));
-				});
-			}
-		}, function (err, results) {
-			if (err) {
-				return setImmediate(cb, err);
-			} else {
-				var stats = {
-					id: slotToSave,
-					locked_balance: results.lockedBalance ? new bignum(results.lockedBalance).toNumber() : 0,
-					locked_bytes: results.lockedBytes ? new bignum(results.lockedBytes).toNumber() : 0,
-					total_bytes: results.clusterStats.TotalStorage ? new bignum(results.clusterStats.TotalStorage).toNumber() : 0,
-					used_bytes: results.clusterStats.UsedStorage ? new bignum(results.clusterStats.UsedStorage).toNumber() : 0,
-					timestamp: slots.getTime()
+				// Parse stats result
+				try {
+					var cluster = JSON.parse(res.body);
+					return setImmediate(seriesCb, null, cluster);
+				} catch(err) {
+					return setImmediate(seriesCb, 'Error parsing cluster response');
 				};
+			}).catch(function (err) {
+				if (peer !== undefined) {
+					__private.removePeer(peer.ip);
+				}
+
+				return setImmediate(seriesCb, [err.code, 'Request failed', req.method, req.url].join(' '));
+			});
+		}
+	}, function (err, results) {
+		if (err) {
+			return setImmediate(cb, err);
+		} else {
+			var stats = {
+				id: slotToSave,
+				locked_balance: results.lockedBalance ? new bignum(results.lockedBalance).toNumber() : 0,
+				locked_bytes: results.lockedBytes ? new bignum(results.lockedBytes).toNumber() : 0,
+				total_bytes: results.clusterStats.TotalStorage ? new bignum(results.clusterStats.TotalStorage).toNumber() : 0,
+				used_bytes: results.clusterStats.UsedStorage ? new bignum(results.clusterStats.UsedStorage).toNumber() : 0,
+				timestamp: slots.getTime()
+			};
+
+			// Remember the received size
+			if (!slotToSave || __private.lastSlotSaved == lastRound + '.' + slotToSave) {
+				__private.totalBytes.push(stats.total_bytes);
+				return cb();
+			} else {
+				// Save the most frequent size out of the collected sizes, once every [10] blocks
+				var mostFrequent = __private.getMostFrequent(__private.totalBytes);
 
 				// Save stats
 				library.schema.validate(stats, schema.setClusterStats, function (err) {
@@ -375,6 +380,7 @@ Locks.prototype.setClusterStats = function (cb) {
 
 					library.db.query(sql.setClusterStats, stats).then(function () {
 						__private.lastSlotSaved = lastRound + '.' + slotToSave;
+						__private.totalBytes = [];
 						library.logger.log('Saved stats to memtable' + ':' + JSON.stringify(stats));
 						return setImmediate(cb, null);
 					}).catch(function (err) {
@@ -383,8 +389,8 @@ Locks.prototype.setClusterStats = function (cb) {
 					});
 				});
 			}
-		});
-	}
+		}
+	});
 }
 
 // Private methods
@@ -421,6 +427,24 @@ __private.removePeer = function(ip) {
 			__private.storagePeers.splice(remove, 1);
 		}
 	}
+}
+
+__private.getMostFrequent = function (array) {
+	var temp, count = 1, most = array[0];
+	for (var i = 0; i < array.length-1; i++) {
+		temp = 0;
+		for (var j = 1; j < array.length; j++) {
+			if (array[i] == array[j]) {
+				temp++;
+			}
+		}
+		if (temp > count) {
+			most = array[i];
+			count = temp;
+		}
+	}
+
+	return most;
 }
 
 // Public methods
