@@ -199,8 +199,8 @@ start_postgres() {
 install_node_npm() {
 
     echo -n "Installing nodejs and npm... "
-    curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash - &>> $logfile
-    sudo apt-get install -y -qq nodejs npm &>> $logfile || { echo "Could not install nodejs and npm. Exiting." && exit 1; }
+    curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - &>> $logfile
+    sudo apt-get install -y -qq nodejs &>> $logfile || { echo "Could not install nodejs and npm. Exiting." && exit 1; }
     echo -e "done.\n" && echo -n "Installing grunt-cli... "
     sudo npm install grunt-cli -g &>> $logfile || { echo "Could not install grunt-cli. Exiting." && exit 1; }
     echo -e "done.\n" && echo -n "Installing bower... "

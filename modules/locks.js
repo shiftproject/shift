@@ -375,7 +375,7 @@ Locks.prototype.setClusterStats = function (cb) {
 				// Save stats
 				library.schema.validate(stats, schema.setClusterStats, function (err) {
 					if (err) {
-						return setImmediate(cb, err[0].message);
+						return setImmediate(cb, err.message);
 					}
 
 					library.db.query(sql.setClusterStats, stats).then(function () {
