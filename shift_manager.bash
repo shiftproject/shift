@@ -199,7 +199,7 @@ start_postgres() {
 install_node_npm() {
 
     echo -n "Installing nodejs and npm... "
-    curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash - &>> $logfile
+    curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash - &>> $logfile
     sudo apt-get install -y -qq nodejs &>> $logfile || { echo "Could not install nodejs and npm. Exiting." && exit 1; }
     echo -e "done.\n" && echo -n "Installing grunt-cli... "
     sudo npm install grunt-cli -g &>> $logfile || { echo "Could not install grunt-cli. Exiting." && exit 1; }
@@ -224,7 +224,7 @@ install_shift() {
 install_webui() {
 
     echo -n "Installing Shift WebUi... "
-    git clone https://github.com/ShiftNrg/shift-wallet &>> $logfile || { echo -n "Could not clone git wallet source. Exiting." && exit 1; }
+    git clone https://github.com/ShiftProject/shift-wallet &>> $logfile || { echo -n "Could not clone git wallet source. Exiting." && exit 1; }
 
     if [[ -d "public" ]]; then
         rm -rf public/
@@ -258,7 +258,7 @@ install_webui() {
 update_manager() {
 
     echo -n "Updating Shift Manager ... "
-    wget -q -O shift_manager.bash https://raw.githubusercontent.com/ShiftNrg/shift/$GIT_BRANCH/shift_manager.bash
+    wget -q -O shift_manager.bash https://raw.githubusercontent.com/ShiftProject/shift/$GIT_BRANCH/shift_manager.bash
     echo "done."
 
     return 0;
