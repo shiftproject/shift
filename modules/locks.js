@@ -370,7 +370,10 @@ Locks.prototype.setClusterStats = function (cb) {
 				return cb();
 			} else {
 				// Save the most frequent size out of the collected sizes, once every [10] blocks
-				var mostFrequent = __private.getMostFrequent(__private.totalBytes);
+				if (__private.totalBytes.length > 0) {
+					var mostFrequent = __private.getMostFrequent(__private.totalBytes);
+					stats.total_bytes = mostFrequent;
+				}
 
 				// Save stats
 				library.schema.validate(stats, schema.setClusterStats, function (err) {
