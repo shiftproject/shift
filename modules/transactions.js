@@ -10,6 +10,7 @@ var sandboxHelper = require('../helpers/sandbox.js');
 var schema = require('../schema/transactions.js');
 var sql = require('../sql/transactions.js');
 var lockSettings = require('../helpers/lockSettings.js');
+var Pin = require('../logic/pin.js');
 var TransactionPool = require('../logic/transactionPool.js');
 var transactionTypes = require('../helpers/transactionTypes.js');
 var Transfer = require('../logic/transfer.js');
@@ -44,6 +45,7 @@ function Transactions (cb, scope) {
 		balancesSequence: scope.balancesSequence,
 		logic: {
 			transaction: scope.logic.transaction,
+			pin: new Pin()
 		},
 		genesisblock: scope.genesisblock
 	};
@@ -297,6 +299,7 @@ __private.getPinById = function (transaction, cb) {
 			return setImmediate(cb, 'Pin transaction not found');
 		}
 
+		if (pins[0].hash) pins[0].hash = library.logic.pin.cid(pins[0].hash, 0); // Show as cidv0
 		var pin = pins[0];
 
 		return setImmediate(cb, null, pin);
