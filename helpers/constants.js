@@ -48,8 +48,11 @@
  * @property {object} locks
  * @property {number[]} locks.height
  * @property {number} locks.replication - The amount of locations the cluster will pin the data to
- * @property {number} locks.ratio_factor - Used to tune the shift-to-bytes ratio
+ * @property {number} locks.ratioFactor - Used to tune the shift-to-bytes ratio
  * @property {number} locks.buffer - Percentage for a safe buffer the network has available and the sum of all locks would ask
+ * @property {number} maxRemovalMarks - The amount of offline states it takes before the peer is removed from the list
+ * @property {number} lookupPerIterations - How many blocks it will take to lookup new storage peers
+ * @property {number} clusterTolerance - Percentage the cluster size in a received block may differ from the memtable
  * @property {number} signatureLength
  * @property {number} totalAmount
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
@@ -152,8 +155,11 @@ module.exports = {
 		{ height: 4332000,  reward: 80000000,  salary: 9000000 }
 	],
 	locks: [
-		{ height: 1, replication: 3, ratio_factor: 100, buffer: 10 }
+		{ height: 1, replication: 3, ratioFactor: 100, buffer: 10 }
 	],
+	maxRemovalMarks: 5,
+	lookupPerIterations: 3,
+	clusterTolerance: 5,
 	signatureLength: 196,
 	totalAmount: 1009000000000000,
 	unconfirmedTransactionTimeOut: 10800 // 1080 blocks

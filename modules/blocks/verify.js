@@ -507,14 +507,15 @@ Verify.prototype.processBlock = function (block, broadcast, saveBlock, validateS
 						return setImmediate(seriesCb, 'Unexpected locked bytes:' + lockedBytes + ', ' + block.lockedBytes);
 					}
 
-					// Fork: cluster size in block does not match cluster size of stats
-					if (totalBytes > 0 && totalBytes != block.clusterSize) {
+					// Fork: cluster size in block differs from cluster size of stats
+					var difference = Math.abs(100 - Math.floor(block.clusterSize / totalBytes * 100));
+					if (totalBytes > 0 && difference > constants.clusterTolerance) {
 						modules.delegates.fork(block, 7);
-						return setImmediate(seriesCb, 'Unexpected cluster size:' + totalBytes + ', ' + block.clusterSize);
+						return setImmediate(seriesCb, 'Unexpected cluster size, expected:' + totalBytes + ', received:' + block.clusterSize + ' (' + difference + '%)');
 					}
 
 					return setImmediate(seriesCb);
-				});				
+				});
 			} else {
 				return setImmediate(seriesCb);
 			}

@@ -18,6 +18,7 @@ var jobsQueue = require('../helpers/jobsQueue.js');
 var modules, library, self, __private = {}, shared = {};
 
 __private.storagePeers = {};
+__private.markForRemoval = {};
 __private.totalBytes = [];
 __private.assetTypes = {};
 __private.lastSlotSaved = null;
@@ -286,9 +287,8 @@ Locks.prototype.setClusterStats = function (cb) {
 	};
 
 	// Populate peer list, every [3] times we come here
-	var lookupPerIterations = 3;
-	var randomNum = Math.ceil(Math.random() * lookupPerIterations);
-	if (randomNum === lookupPerIterations) {
+	var randomNum = Math.ceil(Math.random() * constants.lookupPerIterations);
+	if (randomNum === constants.lookupPerIterations) {
 		popsicle.request(req).then(function (result) {
 			if (result.status === 200) {
 				try {
@@ -296,6 +296,17 @@ Locks.prototype.setClusterStats = function (cb) {
 					for (var i = 0, row; row = rows[i]; i++) {
 						if (row.Online === true) {
 							__private.addPeer(row.Host, row.Port);
+						} else {
+							if (row.Host in __private.markForRemoval) {
+								if (__private.markForRemoval[row.Host] > constants.maxRemovalMarks) {
+									delete __private.markForRemoval[row.Host];
+									__private.removePeer(row.Host);
+								} else {
+									__private.markForRemoval[row.Host]++;
+								}
+							} else {
+								__private.markForRemoval[row.Host] = 1;
+							}
 						}
 					}
 				} catch(err) {}
@@ -330,7 +341,9 @@ Locks.prototype.setClusterStats = function (cb) {
 		clusterStats: function (seriesCb) {
 			req.url = url + '/stats',
 			popsicle.request(req).then(function (res) {
-				if (res.status !== 200) {
+				if (res.status === 200) {
+					delete __private.markForRemoval[peer.ip];
+				} else {
 					__private.removePeer(peer.ip);
 
 					return setImmediate(seriesCb, ['Received bad response from cluster', res.status, req.method, req.url].join(' '));
@@ -425,6 +438,7 @@ __private.removePeer = function(ip) {
 				break;
 			}
 		}
+
 		if (remove !== false) {
 			library.logger.info('Remove bad storage peer from list', ip);
 			__private.storagePeers.splice(remove, 1);
