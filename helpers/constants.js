@@ -7,7 +7,6 @@
  * @property {number} addressLength - The default address length.
  * @property {number} blockHeaderLength - The default block header length.
  * @property {number} blockSlotWindow - Max window in which a slot could be accepted
- * @property {number} blockStatsInterval - Save cluster stats each x blocks
  * @property {number} blockTime
  * @property {number} blockReceiptTimeOut
  * @property {object} blockVersion - Block format version
@@ -47,6 +46,7 @@
  * @property {number} rewards.distance - Distance between each milestone
  * @property {object} locks
  * @property {number[]} locks.height
+ * @property {number} blockStatsInterval - Save cluster stats each x blocks
  * @property {number} locks.replication - The amount of locations the cluster will pin the data to
  * @property {number} locks.ratioFactor - Used to tune the shift-to-bytes ratio
  * @property {number} locks.buffer - Percentage for a safe buffer the network has available and the sum of all locks would ask
@@ -58,24 +58,25 @@
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
  */
 module.exports = {
-	currentVersion: '6.9.1t',
+	currentVersion: '7.0.0t',
 	minVersion: [
 		{ height: 1,      ver: '^6.0.1t'},
 		{ height: 370000, ver: '^6.3.0t'},
 		{ height: 640000, ver: '^6.5.0t'},
 		{ height: 1617500, ver: '^6.8.0t'},
 		{ height: 2700000, ver: '>=6.8.0'},
-		{ height: 2725930, ver: '>6.9.0'}
+		{ height: 2725930, ver: '>6.9.0'},
+		{ height: 2924610, ver: '^7.0.0'}
 	],
 	activeDelegates: 101,
 	addressLength: 208,
 	blockHeaderLength: 248,
 	blockSlotWindow: 5,
-	blockStatsInterval: 10,
 	blockTime: 27000,
 	blockReceiptTimeOut: 27 * 2, // 2 blocks
 	blockVersion: [
-		{ height: 1, ver: 0}
+		{ height: 1, ver: 0},
+		{ height: 2924610, ver: 1}
 	],
 	confirmationLength: 77,
 	epochTime: new Date(Date.UTC(2016, 4, 24, 17, 0, 0, 0)),
@@ -101,7 +102,7 @@ module.exports = {
 				multisignature: 50000000, // 0.5
 				dapp: 2500000000	//25
 			}
-		},		
+		},
 		{
 			height: 2725930,
 			fees: {
@@ -157,6 +158,7 @@ module.exports = {
 	locks: [
 		{ height: 1, replication: 3, ratioFactor: 100, buffer: 10 }
 	],
+	blockStatsInterval: 10,
 	maxRemovalMarks: 5,
 	lookupPerIterations: 3,
 	clusterTolerance: 5,
