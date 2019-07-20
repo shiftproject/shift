@@ -16,12 +16,6 @@ var httpApi = require('../../helpers/httpApi');
  *  - get	/multisignatures
  * 	- get	/unconfirmed/get
  * 	- get	/unconfirmed
- * 	- get	/locks
- * 	- get	/locks/get
- * 	- get	/pins
- * 	- get	/pins/get
- * 	- get	/pins/getBytes
- * 	- get	/pins/verify
  * 	- put	/
  * @memberof module:transactions
  * @requires helpers/Router

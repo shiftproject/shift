@@ -114,7 +114,7 @@ Pin.prototype.verify = function (trs, sender, cb) {
 			mostRecentPin = false;
 		}
 
-		if (mostRecentPin.timestamp > trs.timestamp) {
+		if (mostRecentPin && mostRecentPin.timestamp > trs.timestamp) {
 			return setImmediate(cb, "Timestamp cannot be older than the previous pin");
 		}
 
@@ -253,7 +253,7 @@ Pin.prototype.apply = function (trs, block, sender, cb) {
 		return setImmediate(cb, err);
 	}
 
-	library.logger.trace('Logic/Pin->apply ' + (trs.type == 10 ? 'pin' : 'unpin'), {sender: trs.senderId, bytes: pinBytes, height: block.height});
+	library.logger.trace('Logic/Pin->apply ' + (trs.type == transactionTypes.PIN ? 'pin' : 'unpin'), {sender: trs.senderId, bytes: pinBytes, height: block.height});
 
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,
@@ -311,7 +311,7 @@ Pin.prototype.applyUnconfirmed = function (trs, sender, cb) {
 		return setImmediate(cb, err);
 	}
 
-	library.logger.trace('Logic/Pin->apply ' + (trs.type == 10 ? 'pin' : 'unpin'), {sender: trs.senderId, bytes: pinBytes});
+	library.logger.trace('Logic/Pin->apply ' + (trs.type == transactionTypes.PIN ? 'pin' : 'unpin'), {sender: trs.senderId, bytes: pinBytes});
 
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,

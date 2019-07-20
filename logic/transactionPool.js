@@ -761,13 +761,19 @@ __private.processVerifyTransaction = function (transaction, broadcast, cb) {
 			});
 		},
 		function assetExists (sender, waterCb) {
-			if (transaction.type === transactionTypes.PIN || transaction.type === transactionTypes.UNPIN) {
+			if (transaction.type === transactionTypes.LOCK || transaction.type === transactionTypes.UNLOCK || 
+				transaction.type === transactionTypes.PIN || transaction.type === transactionTypes.UNPIN
+			){
 				var transactions = self.getUnconfirmedTransactionList(true, constants.maxTxsPerBlock);
 				async.eachSeries(transactions, function (trs, eachSeriesCb) {
-					if (transaction.senderId === trs.senderId &&
-						transaction.type === trs.type &&
-						transaction.asset.pin.hash === trs.asset.pin.hash) {
-							return setImmediate(eachSeriesCb, 'Pin transaction is already being processed');
+					if (transaction.senderId === trs.senderId && transaction.type === trs.type) {
+						if (transaction.type === transactionTypes.LOCK || transaction.type === transactionTypes.UNLOCK) {
+							return setImmediate(eachSeriesCb, 'A lock transaction is already being processed');
+						}
+						if (transaction.type === transactionTypes.PIN || transaction.type === transactionTypes.UNPIN && transaction.asset.pin.hash === trs.asset.pin.hash) {
+							return setImmediate(eachSeriesCb, 'This pin transaction is already being processed');
+						}
+						return setImmediate(eachSeriesCb);
 					} else {
 						return setImmediate(eachSeriesCb);
 					}

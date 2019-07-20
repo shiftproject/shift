@@ -112,16 +112,16 @@ Lock.prototype.verify = function (trs, sender, cb) {
 		}
 
 		var lastBlock = modules.blocks.lastBlock.get();
-		self.calcLockBytes(lastBlock.height, trs.amount, trs.timestamp, function(err, result){
+		self.calcLockBytes(lastBlock.height, trs.amount, trs.timestamp, function(err, bytes){
 			if (err) {
 				// Unable to calculate | incomplete stats
 				return setImmediate(cb, err, trs);
 			}
 
-			var lockBytes = Math.round(result);
-
+			var lockBytes = Math.floor(bytes);
 			if (lockBytes < trs.asset.lock.bytes) {
-				return setImmediate(cb, 'Bytes to lock (' +trs.asset.lock.bytes+ ') cannot exceed calculated bytes (' +lockBytes+ ')');
+				var err = 'Bytes to lock (' + trs.asset.lock.bytes + ') cannot exceed calculated bytes (' + lockBytes + ')';
+				return setImmediate(cb, err);
 			}
 
 			return setImmediate(cb, err, trs);
@@ -132,31 +132,34 @@ Lock.prototype.verify = function (trs, sender, cb) {
 			return setImmediate(cb, err);
 		}
 
+		var totalAmount = new bignum(trs.amount.toString());
+		var lockedBalance = new bignum(sender.locked_balance.toString());
+		if (lockedBalance.lessThan(totalAmount)) {
+			var err = "SHIFT to unlock " + totalAmount.div(Math.pow(10,8)) + " cannot exceed locked SHIFT (" + lockedBalance.div(Math.pow(10,8)) + ')';
+			return setImmediate(cb, err);
+		}
+
 		var publicKey = trs.senderPublicKey;
-		self.calcUnlockBytes(trs, function (err, bytes) {
-			if (err || !bytes) {
+		self.calcUnlockBytes(trs, function (err, unlockBytes) {
+			if (err || !unlockBytes) {
 				return cb('calcUnlockBytes error: ' + err);
 			}
 
-			var unlockBytes = new bignum(bytes.toString()).toNumber();
-
-			modules.locks.getLockedBytes(publicKey, function (err, bytes) {
-				if (err) {
+			modules.locks.getLockedBytes(publicKey, function (err, lockedBytes) {
+				if (err || !lockedBytes) {
 					return cb('getLockedBytes error: ' + err);
 				}
 
-				var lockedBytes = new bignum(bytes.toString()).toNumber();
-
 				if (lockedBytes < trs.asset.lock.bytes) {
-					return setImmediate(cb, "Bytes to unlock " + trs.asset.lock.bytes + " cannot exceed locked bytes (" +lockedBytes+ ')');
+					return setImmediate(cb, "Bytes to unlock " + trs.asset.lock.bytes + " cannot exceed locked bytes (" + lockedBytes + ')');
 				}
 
-				modules.pins.getPinnedBytes(publicKey, function (err, bytes) {
-					var pinnedBytes = new bignum(bytes.toString()).toNumber();
+				modules.pins.getPinnedBytes(publicKey, function (err, pinnedBytes) {
 					var availableLockedBytes = lockedBytes - pinnedBytes;
 
-					if (availableLockedBytes - unlockBytes < 0) {
-						return setImmediate(cb, 'Account does not have enough available bytes locked to complete unlock request');
+					if (availableLockedBytes < unlockBytes) {
+						var err = 'Account does not have enough available bytes locked to complete unlock request';
+						return setImmediate(cb, err);
 					}
 
 					return setImmediate(cb, err, trs);
@@ -252,7 +255,6 @@ Lock.prototype.calcLockBytes = function (height, amount, timestamp, cb) {
 
 Lock.prototype.calcUnlockBytes = function (trs, cb) {
 	var publicKey = trs.senderPublicKey;
-	var amount = trs.amount;
 
 	modules.locks.getLockedBytes(publicKey, function (err, bytes) {
 		if (err || !bytes) {
@@ -266,13 +268,13 @@ Lock.prototype.calcUnlockBytes = function (trs, cb) {
 				return setImmediate(cb, "Locked balance is 0");
 			}
 
-			var lockedBalance = new bignum(balance.toString()).toNumber();
-
-			if (amount > lockedBalance) {
-				return setImmediate(cb, "Amount to unlock " + amount + " cannot exceed locked balance  " + lockedBalance);
+			var lockedBalance = new bignum(balance.toString());
+			var totalAmount = new bignum(trs.amount.toString());
+			if (lockedBalance.lessThan(totalAmount)) {
+				return setImmediate(cb, "Amount to unlock " + totalAmount.div(Math.pow(10,8)) + " cannot exceed locked balance  " + lockedBalance.div(Math.pow(10,8)));
 			}
 
-			var bytes = (lockedBytes / lockedBalance) * amount;
+			var bytes = Math.round((lockedBytes / lockedBalance) * trs.amount);
 
 			return setImmediate(cb, null, bytes);
 		});
@@ -323,7 +325,7 @@ Lock.prototype.apply = function (trs, block, sender, cb) {
 		return setImmediate(cb, err);
 	}
 
-	library.logger.trace('Logic/Lock->apply ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes, height: block.height});
+	library.logger.trace('Logic/Lock->apply ' + (trs.type == transactionTypes.LOCK ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes, height: block.height});
 
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,
@@ -354,7 +356,6 @@ Lock.prototype.undo = function (trs, block, sender, cb) {
 		return setImmediate(cb, err);
 	}
 
-
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,
 		locked_balance: lockAmount,
@@ -377,7 +378,7 @@ Lock.prototype.applyUnconfirmed = function (trs, sender, cb) {
 		return setImmediate(cb, err);
 	}
 
-	library.logger.trace('Logic/Lock->applyUnconfirmed ' + (trs.type == 8 ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes});
+	library.logger.trace('Logic/Lock->applyUnconfirmed ' + (trs.type == transactionTypes.LOCK ? 'lock' : 'unlock'), {sender: trs.senderId, balance: lockAmount, bytes: lockBytes});
 
 	modules.accounts.mergeAccountAndGet({
 		address: trs.senderId,

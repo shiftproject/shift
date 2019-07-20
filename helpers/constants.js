@@ -58,7 +58,7 @@
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
  */
 module.exports = {
-	currentVersion: '7.0.0t',
+	currentVersion: '7.1.0t',
 	minVersion: [
 		{ height: 1,      ver: '^6.0.1t'},
 		{ height: 370000, ver: '^6.3.0t'},
@@ -66,7 +66,8 @@ module.exports = {
 		{ height: 1617500, ver: '^6.8.0t'},
 		{ height: 2700000, ver: '>=6.8.0'},
 		{ height: 2725930, ver: '>6.9.0'},
-		{ height: 2924610, ver: '^7.0.0'}
+		{ height: 2924610, ver: '^7.0.0'},
+		{ height: 2954429, ver: '^7.1.0'}
 	],
 	activeDelegates: 101,
 	addressLength: 208,
