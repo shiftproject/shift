@@ -256,7 +256,7 @@ d.run(function () {
 		 * Once config is completed, creates app, http & https servers & sockets with express.
 		 * @method network
 		 * @param {object} scope - The results from current execution,
-		 * at leats will contain the required elements.
+		 * at least will contain the required elements.
 		 * @param {nodeStyleCallback} cb - Callback function with created Object: 
 		 * `{express, app, server, io, https, https_io}`.
 		 */
@@ -518,8 +518,8 @@ d.run(function () {
 
 					d.run(function () {
 						logger.debug('Loading module', name);
-						var Klass = require(config.modules[name]);
-						var obj = new Klass(cb, scope);
+						var moduleClass = require(config.modules[name]);
+						var obj = new moduleClass(cb, scope);
 						modules.push(obj);
 					});
 				};

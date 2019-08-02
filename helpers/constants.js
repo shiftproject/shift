@@ -41,7 +41,7 @@
  * @property {number} unconfirmedTransactionTimeOut - 1080 blocks
  */
 module.exports = {
-	currentVersion: '6.8.4',
+	currentVersion: '6.8.5',
 	minVersion: [
 		{ height: 1,      ver: '^6.1.0'},
 		{ height: 600000, ver: '^6.3.0'},
@@ -86,7 +86,7 @@ module.exports = {
 	maxAmount: 100000000,
 	maxConfirmations: 77 * 100,
 	maxPayloadLength: 1024 * 1024,
-	maxPeers: 100,
+	maxPeers: 50,
 	maxRequests: 10000 * 12,
 	maxSharedTxs: 100,
 	maxSignaturesLength: 196 * 256,

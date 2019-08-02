@@ -354,6 +354,11 @@ Peers.prototype.discover = function (cb) {
 			api: '/list',
 			method: 'GET'
 		}, function (err, res) {
+			// Limit amount of peers per batch
+			if (!err && res.peers && res.peers.length > constants.maxPeers) {
+				res.peers = res.peers.slice(0, constants.maxPeers);
+			}
+
 			return setImmediate(waterCb, err, res);
 		});
 	}
@@ -404,7 +409,7 @@ Peers.prototype.discover = function (cb) {
 };
 
 /**
- * Filters peers with private or address or with the same nonce.
+ * Filters peers with private or unspecified address, or with the same ip or nonce.
  * @param {peer[]} peers
  * @return {peer[]} Filtered list of peers
  */
@@ -412,14 +417,14 @@ Peers.prototype.acceptable = function (peers) {
 	return _(peers)
 		.uniqWith(function (a, b) {
 			// Removing non-unique peers
-			return (a.ip + a.port) === (b.ip + b.port);
+			return a.ip === b.ip;
 		})
 		.filter(function (peer) {
 			// Removing peers with private address or nonce equal to self
 			if ((process.env['NODE_ENV'] || '').toUpperCase() === 'TEST') {
 				return peer.nonce !== modules.system.getNonce() && (peer.os !== 'lisk-js-api');
 			}
-			return !ip.isPrivate(peer.ip) && peer.nonce !== modules.system.getNonce() && (peer.os !== 'lisk-js-api');
+			return !ip.isPrivate(peer.ip) && peer.ip !== "0.0.0.0" && peer.nonce !== modules.system.getNonce() && (peer.os !== 'lisk-js-api');
 		}).value();
 };
 
