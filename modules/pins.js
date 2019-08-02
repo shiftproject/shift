@@ -119,6 +119,26 @@ Pins.prototype.getPinnedBytes = function (publicKey, cb) {
 };
 
 /**
+ * Gets the total sum of pinned bytes of all accounts
+ * @param {function} cb - Callback function.
+ * @returns {setImmediateCallback} error | data: {bytes}
+ */
+Pins.prototype.getTotalPinnedBytes = function (cb) {
+	library.db.query(sql.getTotalPinnedBytes).then(function (rows) {
+		if (rows.length === 0) {
+			return setImmediate(cb, null, 0);
+		}
+
+		var bytes = rows[0].sum;
+
+		return setImmediate(cb, null, bytes);
+	}).catch(function (err) {
+		library.logger.error(err.stack);
+		return setImmediate(cb, 'Pins#getTotalPinnedBytes error');
+	});
+};
+
+/**
  * Gets the most recent pin
  * @param {string} hash
  * @param {int} bytes
@@ -127,8 +147,8 @@ Pins.prototype.getPinnedBytes = function (publicKey, cb) {
  * @returns {setImmediateCallback} error | data: {pin}
  */
 Pins.prototype.getMostRecentPin = function (hash, senderId, cb) {
-	hash = __private.pin.cid(hash, 1); // Query as cidv1
-	library.db.query(sql.getMostRecentPin, {hash: hash, senderId: senderId}).then(function (pins) {
+	var pinnedHash = __private.pin.cid(hash, 1); // Query as cidv1
+	library.db.query(sql.getMostRecentPin, {hash: pinnedHash, senderId: senderId}).then(function (pins) {
 		if (pins.length === 0) {
 			return setImmediate(cb, 'Pin transaction not found: ' + hash + ' with sender ' + senderId);
 		}
@@ -244,6 +264,17 @@ Pins.prototype.shared = {
 
 				return setImmediate(cb, null, {bytes: (bytes * replication)});
 			});
+		});
+	},
+	getTotalPinnedBytes: function (req, cb) {
+		var replication = modules.locks.getReplication();
+
+		self.getTotalPinnedBytes(function (err, bytes) {
+			if (err) {
+				return setImmediate(cb, err);
+			}
+
+			return setImmediate(cb, null, {bytes: (bytes * replication)});
 		});
 	},
 	getPinsByParent: function (req, cb) {

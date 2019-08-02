@@ -31,7 +31,7 @@ function BlocksHttpApi (blocksModule, app, logger, cache) {
 
 	var router = new Router();
 
-	// attach a middlware to endpoints
+	// attach a middleware to endpoints
 	router.attachMiddlewareForUrls(httpApi.middleware.useCache.bind(null, logger, cache), [
 		'get /'
 	]);

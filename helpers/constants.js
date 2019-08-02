@@ -125,7 +125,7 @@ module.exports = {
 	maxAmount: 100000000,
 	maxConfirmations: 77 * 100,
 	maxPayloadLength: 1024 * 1024,
-	maxPeers: 100,
+	maxPeers: 50,
 	maxRequests: 10000 * 12,
 	maxSharedTxs: 100,
 	maxSignaturesLength: 196 * 256,

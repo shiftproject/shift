@@ -366,7 +366,6 @@ Transport.prototype.getFromPeer = function (peer, options, cb) {
 	}
 
 	popsicle.request(req)
-		.use(popsicle.plugins.parse(['json'], false))
 		.then(function (res) {
 			if (res.status !== 200) {
 				// Remove peer
@@ -375,6 +374,17 @@ Transport.prototype.getFromPeer = function (peer, options, cb) {
 				return setImmediate(cb, ['Received bad response code', res.status, req.method, req.url].join(' '));
 			} else {
 				var headers = peer.applyHeaders(res.headers);
+
+				if (res.body.length > (1000 * 1000 * 2)) {
+					// Remove peer
+					__private.removePeer({peer: peer, code: 'ERESPONSE ' + res.status}, req.method + ' ' + req.url);
+
+					return setImmediate(cb, ['Response size exceeds 2mb limit', headers.version, req.method, req.url].join(' '));
+				} else {
+					try {
+						res.body = JSON.parse(res.body);
+					} catch (e) {}
+				}
 
 				var report = library.schema.validate(headers, schema.headers);
 				if (!report) {

@@ -343,7 +343,7 @@ d.run(function () {
 		 * adds configuration to `network.app`.
 		 * @method connect
 		 * @param {object} scope - The results from current execution,
-		 * at leats will contain the required elements.
+		 * at least will contain the required elements.
 		 * @param {function} cb - Callback function.
 		 */
 		connect: ['config', 'public', 'genesisblock', 'logger', 'build', 'network', function (scope, cb) {
@@ -522,8 +522,8 @@ d.run(function () {
 
 					d.run(function () {
 						logger.debug('Loading module', name);
-						var Klass = require(config.modules[name]);
-						var obj = new Klass(cb, scope);
+						var moduleClass = require(config.modules[name]);
+						var obj = new moduleClass(cb, scope);
 						modules.push(obj);
 					});
 				};
