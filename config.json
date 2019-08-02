@@ -75,7 +75,7 @@
         },
         "options": {
             "limits": {
-                "max": 0,
+                "max": 100,
                 "delayMs": 0,
                 "delayAfter": 0,
                 "windowMs": 60000
