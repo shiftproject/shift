@@ -36,7 +36,7 @@ Reload Shift (stop and start)
 ```
 ./shift_manager.bash reload
 ```
-Shift node status, is it running or not?
+Check Shift status
 ```
 ./shift_manager.bash status
 ```
